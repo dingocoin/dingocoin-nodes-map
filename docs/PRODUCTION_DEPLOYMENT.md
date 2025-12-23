@@ -152,9 +152,6 @@ This project is **production-ready** with the following infrastructure:
 ### Required for Web App
 
 ```bash
-# Chain configuration
-NEXT_PUBLIC_CHAIN=dingocoin
-
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
@@ -274,16 +271,10 @@ When forking for a new chain:
    - `config/project.config.yaml` - Colors, logos, and styling
    - Restart web container: `docker restart atlasp2p-web`
 
-3. **Update environment:**
-   ```bash
-   NEXT_PUBLIC_CHAIN=your-chain-name
-   ```
-
-4. **GitHub Workflow Updates:**
-   - Update `NEXT_PUBLIC_CHAIN` in `.github/workflows/ci.yml`
+3. **GitHub Workflow Updates:**
    - Update registry and secrets in `.github/workflows/deploy.yml`
 
-5. **Deploy:**
+4. **Deploy:**
    ```bash
    git add .
    git commit -m "Customize for YourChain"

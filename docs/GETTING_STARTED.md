@@ -289,7 +289,6 @@ Auth         Storage + DB
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:4020
 SUPABASE_INTERNAL_URL=http://kong:8000
-NEXT_PUBLIC_CHAIN=bitcoin
 ```
 
 ### For Cloud Mode (`.env.cloud.example`)
@@ -298,7 +297,6 @@ NEXT_PUBLIC_CHAIN=bitcoin
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-NEXT_PUBLIC_CHAIN=bitcoin
 ```
 
 **Production**: Add `DOMAIN` and `ACME_EMAIL` for SSL

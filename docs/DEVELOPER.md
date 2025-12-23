@@ -329,9 +329,9 @@ test: add tests for node profiles
 
 2. Update crawler config in `apps/crawler/src/config.py` if needed
 
-3. Set environment variable:
+3. Restart web container to load new config:
    ```bash
-   NEXT_PUBLIC_CHAIN=newcoin make dev
+   docker restart atlasp2p-web
    ```
 
 ### Working with the Crawler
@@ -451,7 +451,6 @@ docker logs atlasp2p-db
 
 ```bash
 # .env
-NEXT_PUBLIC_CHAIN=dingocoin
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:4020
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-key

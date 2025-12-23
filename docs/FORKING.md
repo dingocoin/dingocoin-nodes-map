@@ -803,7 +803,7 @@ export function calculatePIX(
 
 To support multiple chains in one deployment:
 
-1. Set `NEXT_PUBLIC_CHAIN` dynamically (e.g., from subdomain)
+1. Update `config/project.config.yaml` with multi-chain configuration
 2. Run separate crawler instances for each chain
 3. Use chain-specific configs in database
 4. Filter all queries by `chain` column
