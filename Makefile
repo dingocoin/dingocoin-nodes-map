@@ -116,7 +116,7 @@ setup-fork: setup-docker ## 🍴 Setup for forking (enables committing config)
 	@echo "  2. Edit .env with your settings"
 	@echo "  3. Customize logos in apps/web/public/logos/"
 	@echo "  4. Test locally:"
-	@echo "     $(YELLOW)make docker-dev$(RESET)"
+	@echo "     $(YELLOW)make dev$(RESET)"
 	@echo "  5. Commit your fork-specific config (use -f to override gitignore):"
 	@echo "     $(YELLOW)git add -f config/project.config.yaml$(RESET)"
 	@echo "     $(YELLOW)git add .env.docker.example .env.cloud.example$(RESET)"
@@ -130,6 +130,8 @@ setup-fork: setup-docker ## 🍴 Setup for forking (enables committing config)
 # ===========================================
 # DEVELOPMENT MODE
 # ===========================================
+
+dev: docker-dev ## Start development (alias for docker-dev)
 
 docker-dev: ## 🐳 Start LOCAL Docker Supabase (full stack)
 	# Starts all services in Docker (database + app)
