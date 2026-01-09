@@ -34,13 +34,25 @@ config/project.config.yaml              # Deployment config (customize for your 
 ```
 
 **Setup deployment workflow:**
+
+**Quick setup (recommended):**
 ```bash
-# Copy the template
+make setup-deploy
+# Follow the printed instructions
+```
+
+**Manual setup:**
+```bash
+# 1. Copy template
 cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
 
-# Edit deploy.yml with your settings (branch name, registry, etc.)
+# 2. Edit deploy.yml (change branch name, verify settings)
+vim .github/workflows/deploy.yml
 
-# Remove deploy.yml from .gitignore in your fork
+# 3. Remove from gitignore
+sed -i '/.github\/workflows\/deploy.yml/d' .gitignore
+
+# 4. Commit to your fork
 git add .github/workflows/deploy.yml
 git commit -m "Add deployment workflow for MyChain"
 ```

@@ -168,6 +168,25 @@ setup-fork: setup-docker ## Setup for forking (same as setup-docker)
 	@echo "  3. make dev"
 	@echo "  4. Commit config: git add -f config/project.config.yaml && git commit"
 
+setup-deploy: ## Setup deployment workflow for fork (copy from example)
+	@echo "$(CYAN)Setting up deployment workflow...$(RESET)"
+	@if [ -f .github/workflows/deploy.yml ]; then \
+		echo "$(YELLOW)⚠ deploy.yml already exists, skipping copy$(RESET)"; \
+	else \
+		cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml; \
+		echo "$(GREEN)✓ Created .github/workflows/deploy.yml$(RESET)"; \
+	fi
+	@echo ""
+	@echo "$(YELLOW)Next steps:$(RESET)"
+	@echo "  1. Edit .github/workflows/deploy.yml (change branch if needed)"
+	@echo "  2. Configure deployment in config/project.config.yaml"
+	@echo "  3. Remove deploy.yml from .gitignore:"
+	@echo "     sed -i '/.github\/workflows\/deploy.yml/d' .gitignore"
+	@echo "  4. Commit workflow:"
+	@echo "     git add .github/workflows/deploy.yml && git commit -m 'Add deployment workflow'"
+	@echo ""
+	@echo "$(CYAN)See docs/CICD.md for complete setup guide$(RESET)"
+
 # ===========================================
 # DEVELOPMENT - DOCKER MODE
 # ===========================================

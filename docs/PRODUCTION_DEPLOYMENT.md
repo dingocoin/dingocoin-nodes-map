@@ -39,15 +39,27 @@ This project is **production-ready** with the following infrastructure:
 **Complete automated deployment pipeline** with smart infrastructure detection.
 
 **Setup:**
+
+**Quick setup (recommended):**
 ```bash
-# Copy the deployment workflow template
+make setup-deploy
+# Follow printed instructions to configure and commit
+```
+
+**Manual setup:**
+```bash
+# 1. Copy template
 cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
 
-# Customize for your fork (branch name, registry settings)
-# vim .github/workflows/deploy.yml
+# 2. Edit workflow (change branch name, verify settings)
+vim .github/workflows/deploy.yml
 
-# Commit to your fork (remove from .gitignore first)
+# 3. Remove from gitignore
+sed -i '/.github\/workflows\/deploy.yml/d' .gitignore
+
+# 4. Commit to your fork
 git add .github/workflows/deploy.yml
+git commit -m "Add deployment workflow"
 ```
 
 **Workflow:** `.github/workflows/deploy.yml` (created from `.example`)

@@ -507,11 +507,26 @@ No changes needed - it works for all forks.
 
 **Forks create their own deployment workflow** by copying the template:
 
+**Quick setup (recommended):**
 ```bash
+make setup-deploy
+# Follow the instructions printed by the command
+```
+
+**Manual setup:**
+```bash
+# 1. Copy template
 cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
-# Edit deploy.yml with your deployment settings
-# Remove deploy.yml from .gitignore in your fork
+
+# 2. Edit deploy.yml (change branch name if needed)
+vim .github/workflows/deploy.yml
+
+# 3. Remove from gitignore
+sed -i '/.github\/workflows\/deploy.yml/d' .gitignore
+
+# 4. Commit to your fork
 git add .github/workflows/deploy.yml
+git commit -m "Add deployment workflow for MyChain"
 ```
 
 The deploy workflow (`deploy.yml`) runs on push to your main branch and provides:

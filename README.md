@@ -86,15 +86,20 @@ make prod-cloud    # Cloud Supabase + Docker app
 **Configure once, deploy forever** with our GitHub Actions workflow:
 
 ```bash
-# 1. Configure deployment in config/project.config.yaml
+# 1. Setup deployment workflow (forks only)
+make setup-deploy
+
+# 2. Configure deployment in config/project.config.yaml
 deployment:
   mode: self-hosted-docker  # or self-hosted-cloud
+  registry:
+    type: ghcr  # or ecr
   caddy:
     mode: auto  # auto-detects infrastructure
   secrets:
     source: auto  # AWS SSM, GitHub Secrets, or manual
 
-# 2. Add GitHub Variables and Secrets
+# 3. Add GitHub Variables and Secrets
 # Settings → Secrets and variables → Actions
 DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH, SSH_PRIVATE_KEY
 
