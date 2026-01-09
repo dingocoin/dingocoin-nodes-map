@@ -1,74 +1,103 @@
 'use client';
 
+import { useMemo, memo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { AlertCircle } from 'lucide-react';
 import { getThemeConfig } from '@/config';
+import { useVersionStats } from '@/hooks/useVersionStats';
 
-export function VersionDistributionChart() {
+// Memoized tooltip
+const CustomTooltip = memo(({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: payload[0].payload.color }} />
+        <p className="text-foreground font-semibold">{payload[0].name}</p>
+      </div>
+      <p className="text-foreground text-sm ml-5">
+        Nodes: <strong>{payload[0].value}</strong> ({payload[0].payload.percentage.toFixed(1)}%)
+      </p>
+    </div>
+  );
+});
+CustomTooltip.displayName = 'CustomTooltip';
+
+export const VersionDistributionChart = memo(function VersionDistributionChart() {
   const theme = getThemeConfig();
+  const { versions, isLoading, error } = useVersionStats();
 
-  // Mock data - in production from version_distributions view
-  // Using theme colors dynamically
-  const data = [
-    { name: 'v1.16.0', value: 45, color: theme.primaryColor },
-    { name: 'v1.15.1', value: 28, color: theme.secondaryColor },
-    { name: 'v1.14.7', value: 15, color: theme.accentColor },
-    { name: 'v1.14.6', value: 8, color: 'var(--color-chart-2)' },
-    { name: 'Others', value: 4, color: 'var(--color-muted-foreground)' },
-  ];
+  // Chart colors array (static, no need for state)
+  const chartColors = useMemo(() => [
+    theme.primaryColor,
+    theme.secondaryColor,
+    theme.accentColor,
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+    'hsl(var(--muted-foreground))',
+  ], [theme.primaryColor, theme.secondaryColor, theme.accentColor]);
 
-  // Custom label component for proper theme styling
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 25;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  // Transform data for chart with theme colors (memoized for performance)
+  const chartData = useMemo(() => {
+    return versions.slice(0, 8).map((v, index) => ({
+      name: v.version,
+      value: v.count,
+      percentage: v.percentage,
+      color: chartColors[index % chartColors.length],
+    }));
+  }, [versions, chartColors]);
 
+  if (error) {
     return (
-      <text
-        x={x}
-        y={y}
-        fill="var(--color-foreground)"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        style={{ fontSize: '12px', fontWeight: 600 }}
-      >
-        {`${name} (${(percent * 100).toFixed(0)}%)`}
-      </text>
+      <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Version Distribution</h3>
+        <div className="h-[300px] flex items-center justify-center">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">{error}</p>
+          </div>
+        </div>
+      </div>
     );
-  };
+  }
+
+  if (chartData.length === 0 && !isLoading) {
+    return (
+      <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Version Distribution</h3>
+        <div className="h-[320px] flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">No version data available</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
       <h3 className="text-lg font-semibold mb-4 text-foreground">
         Version Distribution
       </h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={320}>
         <PieChart>
           <Pie
-            data={data}
+            data={chartData}
             cx="50%"
             cy="50%"
-            labelLine={false}
-            label={renderCustomLabel}
-            outerRadius={80}
+            outerRadius={90}
             fill={theme.primaryColor}
             dataKey="value"
+            isAnimationActive={false}
           >
-            {data.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'var(--color-card)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              color: 'var(--color-foreground)'
-            }}
-            labelStyle={{ color: 'var(--color-foreground)' }}
-          />
+          <Tooltip content={<CustomTooltip />} />
         </PieChart>
       </ResponsiveContainer>
     </div>
   );
-}
+});

@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/badge/GitHub-RaxTzu%2FAtlasP2P-blue)](https://github.com/RaxTzu/AtlasP2P)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-success)](https://raxtzu.github.io/AtlasP2P/)
+[![CI](https://github.com/RaxTzu/AtlasP2P/actions/workflows/ci.yml/badge.svg)](https://github.com/RaxTzu/AtlasP2P/actions/workflows/ci.yml)
 
 A professional, production-ready P2P network visualization platform for cryptocurrency blockchains. Monitor your network's health, discover nodes worldwide, and provide transparency to your community.
 
@@ -57,10 +58,13 @@ make cloud-dev      # Starts Web + Crawler only
 - Commit with `git add -f config/project.config.yaml`
 - See [FORKING.md](./docs/FORKING.md) for complete instructions
 
-**Access locally**:
+**Access locally** (default ports - configurable via .env):
 - Web App: http://localhost:4000
 - Supabase Studio: http://localhost:4022 (Docker mode only)
 - API: http://localhost:4020 (Docker mode only)
+- Inbucket (email testing): http://localhost:4023 (Docker mode only)
+
+**Port Configuration**: All ports are configurable in `.env` via `WEB_PORT`, `KONG_PORT`, `DB_PORT`, `STUDIO_PORT`, etc. See `.env.example` for full list.
 
 ### Production
 
@@ -70,10 +74,47 @@ DOMAIN=nodes.yourcoin.org
 ACME_EMAIL=admin@yourcoin.org
 
 # 2. Deploy with auto-SSL
-make prod
+make prod-docker   # Self-hosted (full stack)
+# OR
+make prod-cloud    # Cloud Supabase + Docker app
 ```
 
 **Access**: https://nodes.yourcoin.org (Caddy handles SSL certificates automatically)
+
+### Automated CI/CD Deployment
+
+**Configure once, deploy forever** with our GitHub Actions workflow:
+
+```bash
+# 1. Setup deployment workflow (forks only)
+make setup-deploy
+
+# 2. Configure deployment in config/project.config.yaml
+deployment:
+  mode: self-hosted-docker  # or self-hosted-cloud
+  registry:
+    type: ghcr  # or ecr
+  caddy:
+    mode: auto  # auto-detects infrastructure
+  secrets:
+    source: auto  # AWS SSM, GitHub Secrets, or manual
+
+# 3. Add GitHub Variables and Secrets
+# Settings → Secrets and variables → Actions
+DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH, SSH_PRIVATE_KEY
+
+# 3. Push to master - automatic deployment!
+git push origin master
+```
+
+**Features:**
+- ✅ Auto-detects Caddy (container/host/none)
+- ✅ Auto-detects secrets management (SSM/GitHub/manual)
+- ✅ Health checks with automatic rollback
+- ✅ Database backups before deployment
+- ✅ Multi-secrets sources (AWS Parameter Store, GitHub Secrets, manual .env)
+
+**See:** [docs/CICD.md](./docs/CICD.md) for complete automated deployment guide
 
 ## Tech Stack
 
@@ -126,7 +167,9 @@ chainConfig:
 
 **3. Deploy!**
 ```bash
-make prod
+make prod-docker   # Self-hosted
+# OR
+make prod-cloud    # Cloud Supabase
 ```
 
 **Keep Your Fork Updated:**

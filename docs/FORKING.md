@@ -1,3 +1,8 @@
+---
+layout: default
+title: Forking Guide - AtlasP2P
+---
+
 # Forking Guide: Create Your Own Blockchain Nodes Map
 
 This guide walks you through forking this project to create a nodes map for **any** cryptocurrency blockchain.
@@ -152,7 +157,7 @@ cp your-favicon.ico apps/web/public/logos/yourcoin-favicon.ico
 
 See `apps/web/public/logos/README.md` for detailed logo guidelines and best practices.
 
-### Step 4: Configure Environment
+### Step 5: Configure Environment
 
 ```bash
 # Copy example environment file
@@ -174,21 +179,21 @@ MAXMIND_ACCOUNT_ID=123456
 MAXMIND_LICENSE_KEY=xxxxx
 ```
 
-### Step 5: Build and Run
+### Step 6: Start Development
 
 ```bash
-# Build the project
-pnpm build
-
-# Start local Supabase (includes PostgreSQL)
-make up
-
-# Download GeoIP databases
-make geoip-download
-
-# Start the web app
+# Start the full development stack
 make dev
 # Opens at http://localhost:4000
+
+# This starts:
+# - PostgreSQL database
+# - Supabase services (Auth, API, Studio)
+# - Next.js web app (hot reload)
+# - Crawler service
+
+# Download GeoIP databases (for geographic data)
+make geoip
 ```
 
 **That's it!** You now have a working nodes map. Continue reading for crawler setup and deployment.
@@ -208,16 +213,16 @@ make dev
    - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` `secret` key → `SUPABASE_SERVICE_ROLE_KEY`
 4. Go to **SQL Editor** and run migrations:
-   - Copy contents of `/supabase/migrations/00000_supabase_core.sql` and run
-   - Copy contents of `/supabase/migrations/00000_supabase_schemas.sql` and run
-   - Copy contents of `/supabase/migrations/00001_supabase_auth.sql` and run
-   - Copy contents of `/supabase/migrations/00002_initial_schema.sql` and run
+   - Copy contents of `/supabase/migrations/0001_foundation.sql` and run
+   - Copy contents of `/supabase/migrations/0002_schema.sql` and run
+   - Copy contents of `/supabase/migrations/0003_functions.sql` and run
+   - Copy contents of `/supabase/migrations/0004_policies.sql` and run
 
 #### Option B: Local Supabase (Docker)
 
 ```bash
-# Start local Supabase stack
-make up
+# Start full development stack (includes Supabase)
+make dev
 
 # Migrations run automatically on first start
 # Access Supabase Studio at http://localhost:4022
@@ -244,7 +249,7 @@ GeoIP databases convert IP addresses to geographic locations.
    ```
 6. Download databases:
    ```bash
-   make geoip-download
+   make geoip
    ```
 
 This downloads `GeoLite2-City.mmdb` and `GeoLite2-ASN.mmdb` to `/data/geoip/`.
@@ -253,72 +258,47 @@ This downloads `GeoLite2-City.mmdb` and `GeoLite2-ASN.mmdb` to `/data/geoip/`.
 
 ## Crawler Configuration
 
-The crawler discovers nodes on your blockchain's P2P network.
+**Good news: The crawler automatically uses your `project.config.yaml`!**
 
-### 1. Create Chain Adapter
+The crawler reads the `chainConfig` section from `config/project.config.yaml` that you already configured in Step 3. No separate Python adapter files needed!
 
-Create `/apps/crawler/src/adapters/yourcoin.py`:
+### How It Works
 
-```python
-"""YourCoin chain adapter"""
-from dataclasses import dataclass
-from typing import List
+The crawler (`apps/crawler/src/config.py`) automatically:
+1. Reads `config/project.config.yaml`
+2. Parses `chainConfig.magicBytes`, `chainConfig.dnsSeeds`, `chainConfig.protocolVersion`, etc.
+3. Uses these values for P2P network discovery
 
-@dataclass
-class ChainConfig:
-    name: str
-    ticker: str
-    magic_bytes: bytes
-    protocol_version: int
-    p2p_port: int
-    dns_seeds: List[str]
-    user_agent: str
+**You already configured everything needed** when you edited `project.config.yaml`!
 
-YOURCOIN_CONFIG = ChainConfig(
-    name="YourCoin",
-    ticker="YOUR",
-    magic_bytes=bytes([0xAB, 0xCD, 0xEF, 0x12]),  # Your chain's magic bytes
-    protocol_version=70015,                        # Your protocol version
-    p2p_port=12345,                                # Your P2P port
-    dns_seeds=[
-        "seed1.yourcoin.org",
-        "seed2.yourcoin.org",
-        "dnsseed.yourcoin.org",
-    ],
-    user_agent="/NodesMap:1.0.0/",
-)
-```
+### Finding Your Chain's Values
 
-**How to find your chain's values**:
+If you need to update your chain configuration, here's where to find the values:
 
-- **Magic bytes**: Check your blockchain's source code (usually in `chainparams.cpp` or similar)
-  - Bitcoin: `0xF9BEB4D9`
-  - Dogecoin: `0xC0C0C0C0`
-  - Dingocoin: `0xC1C1C1C1`
-  - Look for `pchMessageStart` or `netMagic`
+**Magic Bytes** (`chainConfig.magicBytes`):
+- Check your blockchain's source code (usually in `chainparams.cpp` or similar)
+- Bitcoin: `f9beb4d9`
+- Dogecoin: `c0c0c0c0`
+- Dingocoin: `c1c1c1c1`
+- Look for `pchMessageStart` or `netMagic` in code
 
-- **Protocol version**: Usually in `version.h` or protocol documentation
-  - Look for `PROTOCOL_VERSION` constant
+**Protocol Version** (`chainConfig.protocolVersion`):
+- Usually in `version.h` or protocol documentation
+- Look for `PROTOCOL_VERSION` constant
+- Example: `70015` for Bitcoin, `70015` for Dogecoin
 
-- **DNS seeds**: Usually in `chainparams.cpp`
-  - Look for `vSeeds` array
-  - These are DNS servers that return node IP addresses
+**DNS Seeds** (`chainConfig.dnsSeeds`):
+- Usually in `chainparams.cpp`
+- Look for `vSeeds` array
+- These are DNS servers that return node IP addresses
+- Example: `["seed1.yourcoin.org", "seed2.yourcoin.org"]`
 
-### 2. Register Adapter
+**Seed Nodes** (`chainConfig.seedNodes`) - Optional:
+- Hardcoded IP:port pairs for guaranteed discovery
+- Useful if DNS seeds are unreliable
+- Example: `["192.168.1.100:8333", "10.0.0.5:8333"]`
 
-Edit `/apps/crawler/src/config.py`:
-
-```python
-from adapters.yourcoin import YOURCOIN_CONFIG
-
-CHAINS = {
-    "yourcoin": YOURCOIN_CONFIG,
-    "dingocoin": DINGOCOIN_CONFIG,  # Keep existing
-    # ... other chains
-}
-```
-
-### 3. Test Crawler Locally
+### Test Crawler Locally
 
 ```bash
 # Set environment
@@ -506,7 +486,7 @@ AtlasP2P uses a fork-friendly GitHub Actions workflow structure:
 | Workflow | File | Purpose | Customization Needed |
 |----------|------|---------|---------------------|
 | **CI** | `ci.yml` | Lint, typecheck, build, security audit | None - works automatically |
-| **Deploy** | `deploy.yml.example` | Docker build & deployment | Copy and customize |
+| **Deploy** | `deploy.yml` (from `.example`) | Automated production deployment | Copy from example, customize for your setup |
 
 ### CI Workflow (Automatic)
 
@@ -525,29 +505,58 @@ No changes needed - it works for all forks.
 
 ### Deploy Workflow (Fork-Specific)
 
-The deploy workflow is **gitignored** in upstream. Forks create their own:
+**Forks create their own deployment workflow** by copying the template:
 
+**Quick setup (recommended):**
 ```bash
-# 1. Copy the template
-cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
-
-# 2. Edit for your deployment method
-nano .github/workflows/deploy.yml
-
-# 3. Commit (overrides gitignore)
-git add -f .github/workflows/deploy.yml
-git commit -m "Add deployment workflow"
+make setup-deploy
+# Follow the instructions printed by the command
 ```
 
-**Deployment Options (in template):**
+**Manual setup:**
+```bash
+# 1. Copy template
+cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
 
-- **SSH Deployment** (default) - Docker Compose on VPS
-- **Vercel** (commented) - Serverless Next.js hosting
-- **Kubernetes** (commented) - Container orchestration
+# 2. Edit deploy.yml (change branch name if needed)
+vim .github/workflows/deploy.yml
 
-### GitHub Secrets Reference
+# 3. Remove from gitignore
+sed -i '/.github\/workflows\/deploy.yml/d' .gitignore
 
-Set secrets in **Settings → Secrets and variables → Actions**:
+# 4. Commit to your fork
+git add .github/workflows/deploy.yml
+git commit -m "Add deployment workflow for MyChain"
+```
+
+The deploy workflow (`deploy.yml`) runs on push to your main branch and provides:
+
+**Features:**
+- ✅ Auto-detects infrastructure (Caddy, secrets management)
+- ✅ Supports GHCR or ECR registry (easily switchable)
+- ✅ Smart host authentication
+- ✅ Database backups and rollback
+- ✅ Zero workflow editing needed!
+
+**Setup:** Configure in `config/project.config.yaml`:
+```yaml
+deployment:
+  mode: self-hosted-docker  # or self-hosted-cloud
+  registry:
+    type: ghcr  # or ecr
+    public: true
+  caddy:
+    enabled: true
+    mode: auto  # auto-detects
+  secrets:
+    source: auto  # auto-detects
+```
+
+**See:** [Complete CI/CD Guide](./CICD.md) for full setup instructions
+
+### GitHub Secrets & Variables Reference
+
+Set in **Settings → Secrets and variables → Actions**:
 
 **CI Workflow - NO SECRETS NEEDED**
 
@@ -558,50 +567,165 @@ NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
 ```
 
-**Deploy Workflow - Secrets Required**
+**Deploy Workflow - Required Variables**
 
-| Secret | Description | Required For |
-|--------|-------------|--------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | All deployments |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key | All deployments |
-| `GITHUB_TOKEN` | Auto-provided by GitHub | Docker registry (automatic) |
-
-**SSH Deployment (default):**
-
-| Secret | Description | Example |
-|--------|-------------|---------|
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DEPLOY_USER` | SSH username | `ubuntu` |
 | `DEPLOY_HOST` | Server hostname/IP | `nodes.yourcoin.org` |
-| `DEPLOY_USER` | SSH username | `deploy` |
-| `DEPLOY_KEY` | SSH private key (full content) | `-----BEGIN OPENSSH...` |
 | `DEPLOY_PATH` | App path on server | `/opt/atlasp2p` |
-| `HEALTH_CHECK_URL` | URL for post-deploy verification | `https://nodes.yourcoin.org` |
 
-**Vercel Deployment (if using):**
-
-| Secret | Description | Where to Find |
-|--------|-------------|---------------|
-| `VERCEL_TOKEN` | Vercel API token | Vercel Dashboard → Settings → Tokens |
-| `VERCEL_ORG_ID` | Organization/team ID | Vercel Dashboard → Settings → General |
-| `VERCEL_PROJECT_ID` | Project ID | Vercel Project → Settings → General |
-
-**Kubernetes Deployment (if using):**
+**Deploy Workflow - Required Secrets**
 
 | Secret | Description |
 |--------|-------------|
-| `KUBE_CONFIG` | Base64-encoded kubeconfig: `cat ~/.kube/config \| base64` |
+| `SSH_PRIVATE_KEY` | SSH private key for server access |
 
-### Why This Pattern?
+**Deploy Workflow - Optional (Based on Config)**
 
-- **No merge conflicts**: Upstream only touches `.example` file
-- **Fork independence**: Each fork has their own deployment config
-- **Easy updates**: Pull upstream changes without workflow conflicts
-- **Flexibility**: Choose your own deployment method
+**If using ECR registry** (`registry.type: ecr`):
+| Secret/Variable | Description |
+|-----------------|-------------|
+| `AWS_ACCESS_KEY_ID` (Secret) | IAM user for ECR push |
+| `AWS_SECRET_ACCESS_KEY` (Secret) | IAM secret key |
+| `AWS_REGION` (Variable) | ECR region (e.g., us-east-1) |
+
+**If using GitHub Secrets source** (`secrets.source: github-secrets`):
+| Secret | Description |
+|--------|-------------|
+| `DOMAIN` | Production domain |
+| `ACME_EMAIL` | Let's Encrypt email |
+| All .env variables | Add all secrets individually |
+
+**If using AWS SSM source** (`secrets.source: aws-ssm`):
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | IAM user for SSM read |
+| `AWS_SECRET_ACCESS_KEY` | IAM secret key |
+| Store entire .env in SSM Parameter Store |
+
+### Why Config-Driven Deployment?
+
+- **No workflow editing**: All configuration in `project.config.yaml`
+- **Auto-detection**: Smart detection of Caddy, secrets source, registry
+- **Fork-friendly**: Each fork just updates config file
+- **Easy updates**: Pull upstream changes without conflicts
+- **Flexible**: Switch registry/secrets with one config change
 
 ---
 
 ## Deployment
 
-### Option 1: Vercel (Web App Only - Recommended)
+AtlasP2P provides **multiple deployment options** for your fork:
+
+### Option 1: Automated CI/CD (Recommended for Production)
+
+**Complete automated deployment pipeline** that deploys on every push to master.
+
+**Features:**
+- ✅ Auto-detects infrastructure (Caddy, secrets management)
+- ✅ Builds Docker images with caching
+- ✅ Deploys via SSH to your server
+- ✅ Health checks with automatic rollback
+- ✅ Database backups before deployment
+
+**Setup Steps:**
+
+1. **Configure deployment** in `config/project.config.yaml`:
+```yaml
+deployment:
+  mode: self-hosted-docker  # or self-hosted-cloud
+  caddy:
+    enabled: true
+    mode: auto  # auto-detects container/host/none
+  secrets:
+    source: auto  # auto-detects aws-ssm/github-secrets/manual
+    ssmPath: /atlasp2p/prod/env
+  healthCheck:
+    enabled: true
+  backup:
+    enabled: true
+  rollback:
+    enabled: true
+
+  # Docker Registry - Choose GHCR or ECR
+  registry:
+    type: ghcr  # ghcr (free, public) or ecr (AWS, private)
+    public: true  # Only for GHCR - make images public
+    region: us-east-1  # Only for ECR - AWS region
+```
+
+**Registry Configuration:**
+
+AtlasP2P supports two Docker registries:
+
+- **GHCR (GitHub Container Registry)** - Free, unlimited public images ✅ Recommended
+  ```yaml
+  registry:
+    type: ghcr
+    public: true  # No auth needed on server
+  ```
+
+- **ECR (AWS Elastic Container Registry)** - Private images, AWS integration
+  ```yaml
+  registry:
+    type: ecr
+    region: us-east-1  # Your AWS region
+  ```
+
+**For ECR, add these GitHub Secrets:**
+```bash
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+**For ECR, add GitHub Variable:**
+```bash
+AWS_REGION=us-east-1
+```
+
+**See:** [Registry Configuration Guide](./CICD.md#docker-registry-configuration) for complete details, switching registries, and troubleshooting.
+
+---
+
+2. **Add GitHub Variables** (Settings → Secrets and variables → Actions → Variables):
+```bash
+DEPLOY_USER=ubuntu
+DEPLOY_HOST=nodes.yourcoin.com
+DEPLOY_PATH=/opt/atlasp2p
+```
+
+3. **Add GitHub Secret** (Settings → Secrets → Actions):
+```bash
+SSH_PRIVATE_KEY=<your-ssh-private-key>
+```
+
+4. **Choose secrets method:**
+
+**Method A: GitHub Secrets** (Easiest)
+- Add all env vars as GitHub Secrets (DOMAIN, ACME_EMAIL, SUPABASE keys, etc.)
+
+**Method B: AWS Parameter Store** (For teams)
+- Store entire .env in AWS SSM as SecureString
+- Add AWS credentials to GitHub Secrets
+
+**Method C: Manual** (For testing)
+- Create .env directly on server
+
+5. **Commit and push:**
+```bash
+git add config/project.config.yaml
+git commit -m "Configure automated deployment"
+git push origin master
+```
+
+**Automatic deployment triggers!** Watch GitHub Actions for progress.
+
+**See:** [Complete CI/CD Guide](./CICD.md) for detailed instructions, troubleshooting, and advanced configuration.
+
+---
+
+### Option 2: Vercel (Web App Only - Simple)
 
 1. Push your changes to GitHub
 2. Go to [vercel.com](https://vercel.com) and import your repository
@@ -613,25 +737,43 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
 
 **Deploy crawler separately** (see below)
 
-### Option 2: Docker Compose (Full Stack)
+### Option 3: Docker Self-Hosted (Manual - Full Stack)
 
+**With containerized Caddy (handles SSL):**
 ```bash
-# Build all containers
-docker compose build
-
-# Start everything
-docker compose --profile crawler up -d
-
-# View logs
-docker compose logs -f
+# Start production with Caddy (ports 80/443)
+make prod-docker
 ```
 
-Services:
-- Web app: http://localhost:4000
-- Supabase Studio: http://localhost:4022
-- PostgreSQL: localhost:4021
+**Without containerized Caddy (if host Caddy already installed):**
+```bash
+# Start production, expose web on port 4000
+make prod-docker-no-caddy
 
-### Option 3: VPS (Production)
+# Configure your host Caddy to proxy to localhost:4000
+```
+
+**Cloud mode (Supabase Cloud database):**
+```bash
+# With Caddy
+make prod-cloud
+
+# Without Caddy
+make prod-cloud-no-caddy
+```
+
+**View logs:**
+```bash
+make prod-logs
+```
+
+**Development mode:**
+```bash
+make dev         # Starts full stack
+make logs        # View logs
+```
+
+### Option 4: VPS (Production)
 
 #### Web App (Vercel/Netlify)
 See Option 1
@@ -675,7 +817,7 @@ sudo systemctl status yourcoin-crawler
 
 ```bash
 # Build crawler image
-docker build -f docker/Dockerfile.crawler -t yourcoin-crawler .
+docker build -f Dockerfile.crawler -t yourcoin-crawler .
 
 # Run crawler
 docker run -d \
@@ -719,14 +861,14 @@ docker run -d \
 - Test manual connection: `telnet node-ip 12345`
 
 #### Error: "Invalid magic bytes"
-**Cause**: Wrong network magic in adapter
-**Fix**: Check your blockchain's `chainparams.cpp` for correct `pchMessageStart`
+**Cause**: Wrong `magicBytes` in `project.config.yaml`
+**Fix**: Check your blockchain's `chainparams.cpp` for correct `pchMessageStart` and update `chainConfig.magicBytes` in project.config.yaml
 
 #### Error: "No nodes discovered"
 **Cause**: DNS seeds not returning IPs
 **Fix**:
 - Verify DNS seeds: `dig seed1.yourcoin.org`
-- Add hardcoded seed IPs to adapter temporarily
+- Add hardcoded seed nodes to `chainConfig.seedNodes` in project.config.yaml (e.g., `["192.168.1.100:8333"]`)
 - Check if nodes are actually online on your network
 
 ### Database Issues
@@ -783,22 +925,6 @@ themeConfig:
   logo: /logos/dogecoin.png
 ```
 
-Python adapter:
-```python
-DOGECOIN_CONFIG = ChainConfig(
-    name="Dogecoin",
-    ticker="DOGE",
-    magic_bytes=bytes([0xC0, 0xC0, 0xC0, 0xC0]),
-    protocol_version=70015,
-    p2p_port=22556,
-    dns_seeds=[
-        "seed.multidoge.org",
-        "seed2.multidoge.org",
-    ],
-    user_agent="/NodesMap:1.0.0/",
-)
-```
-
 ### Bitcoin
 
 ```yaml
@@ -817,23 +943,6 @@ themeConfig:
   logo: /logos/bitcoin.png
 ```
 
-Python adapter:
-```python
-BITCOIN_CONFIG = ChainConfig(
-    name="Bitcoin",
-    ticker="BTC",
-    magic_bytes=bytes([0xF9, 0xBE, 0xB4, 0xD9]),
-    protocol_version=70016,
-    p2p_port=8333,
-    dns_seeds=[
-        "seed.bitcoin.sipa.be",
-        "dnsseed.bluematt.me",
-        "dnsseed.bitcoin.dashjr.org",
-    ],
-    user_agent="/NodesMap:1.0.0/",
-)
-```
-
 ---
 
 ## Checklist: Launch Your Nodes Map
@@ -847,19 +956,20 @@ BITCOIN_CONFIG = ChainConfig(
 
 **Database:**
 - [ ] Run migrations on Supabase
-- [ ] Create chain adapter in `/apps/crawler/src/adapters/`
-- [ ] Test crawler locally
+- [ ] Test crawler locally (it automatically uses your project.config.yaml)
 
 **Development:**
-- [ ] Build and run web app (`pnpm build && make dev`)
+- [ ] Run `make dev` to start development environment
 - [ ] Verify nodes appear on map
 
 **CI/CD Setup:**
 - [ ] Verify CI workflow runs on your fork (automatic)
-- [ ] Copy `deploy.yml.example` to `deploy.yml`
-- [ ] Configure deployment method (SSH/Vercel/K8s)
-- [ ] Set required GitHub secrets
-- [ ] Commit deploy.yml: `git add -f .github/workflows/deploy.yml`
+- [ ] Configure deployment in `config/project.config.yaml`
+- [ ] Set GitHub Variables (DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH)
+- [ ] Set GitHub Secret (SSH_PRIVATE_KEY)
+- [ ] Choose and configure secrets source (AWS SSM / GitHub Secrets / manual)
+- [ ] Choose registry (GHCR or ECR) in project.config.yaml
+- [ ] See [CI/CD Guide](./CICD.md) for complete setup
 
 **Production:**
 - [ ] Deploy web app to Vercel/Netlify/Docker

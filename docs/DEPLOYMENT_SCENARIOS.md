@@ -1,3 +1,8 @@
+---
+layout: default
+title: Deployment Scenarios - AtlasP2P
+---
+
 # AtlasP2P - Complete Deployment Scenarios
 
 ## 🎯 All Possible Scenarios Explained
@@ -19,6 +24,21 @@ This document covers **EVERY** way you can deploy AtlasP2P, from development to 
 
 ---
 
+## 🤖 Automated CI/CD
+
+**AtlasP2P includes a complete CI/CD pipeline for automated production deployments.**
+
+- Auto-detects infrastructure (Caddy, secrets management)
+- Builds and deploys on push to master
+- Health checks with automatic rollback
+- Multiple secrets sources (AWS SSM, GitHub Secrets, manual)
+
+**Setup:** Configure once in `config/project.config.yaml`, deploy forever.
+
+**See:** [CI/CD Documentation](./CICD.md) for complete guide.
+
+---
+
 ## 🔍 Detailed Scenarios
 
 ### Scenario 1: Dev - Local Docker (Default)
@@ -26,15 +46,34 @@ This document covers **EVERY** way you can deploy AtlasP2P, from development to 
 **Architecture:**
 ```
 Docker Compose
-├── PostgreSQL (5432 → 4021)
-├── Kong (8000 → 4020)
+├── PostgreSQL (5432 → ${DB_PORT:-4021})
+├── Kong (8000 → ${KONG_PORT:-4020})
 ├── GoTrue (auth)
 ├── PostgREST (REST API)
-├── Inbucket (email testing → 4023)
-├── Supabase Studio (admin → 4022)
-├── Web App (Next.js → 4000)
+├── Inbucket (email testing → ${INBUCKET_WEB_PORT:-4023})
+├── Supabase Studio (admin → ${STUDIO_PORT:-4022})
+├── Web App (Next.js → ${WEB_PORT:-4000})
 └── Crawler (Python)
 ```
+
+**Port Configuration:**
+All exposed ports are configurable via `.env` for maximum flexibility:
+
+```bash
+# .env - Port Configuration
+WEB_PORT=4000              # Web app
+KONG_PORT=4020             # Supabase API Gateway
+DB_PORT=4021               # PostgreSQL direct access
+STUDIO_PORT=4022           # Supabase Studio UI
+INBUCKET_WEB_PORT=4023     # Email testing UI
+INBUCKET_SMTP_PORT=4024    # Email SMTP
+```
+
+**Why configurable ports?**
+- Run multiple AtlasP2P instances (different chains)
+- Avoid port conflicts with existing services
+- Custom firewall rules
+- Fork-friendly deployment
 
 **Setup:**
 ```bash
@@ -126,13 +165,15 @@ Terminal (foreground)
 
 **Setup:**
 ```bash
-# 1. Start database
-make up
+# 1. Start database services (in background)
+make docker-dev  # Starts all services
+# OR manually start only DB + Supabase services:
+# docker compose -f docker-compose.yml up -d db kong auth rest meta
 
 # 2. Run migrations
 make migrate
 
-# 3. Start Next.js
+# 3. Start Next.js in dev mode (foreground, hot reload)
 pnpm --filter @atlasp2p/web dev
 ```
 
@@ -160,7 +201,7 @@ Docker Compose
 └── Crawler
 ```
 
-**Setup:**
+**Setup (Manual):**
 ```bash
 # On production server
 git clone https://github.com/YourOrg/YourNodes.git
@@ -177,8 +218,18 @@ SMTP_PORT=587
 SMTP_USER=apikey
 SMTP_PASS=your-key
 
-# Start
+# Start (with Caddy)
 make prod-docker
+
+# OR start without container Caddy (if host Caddy installed)
+make prod-docker-no-caddy
+```
+
+**Setup (Automated CI/CD):**
+```bash
+# Configure deployment in config/project.config.yaml
+# See docs/CICD.md for complete guide
+# Then just push to master - automatic deployment!
 ```
 
 **Includes:**
@@ -225,7 +276,7 @@ Supabase Cloud (managed)
 └── Realtime
 ```
 
-**Setup:**
+**Setup (Manual):**
 ```bash
 # 1. Create Supabase project
 supabase projects create nodes-prod --org-id xxx --region us-east-1
@@ -251,8 +302,18 @@ supabase db push
 # 4. Create storage bucket (SQL Editor)
 # See SUPABASE_QUICKSTART.md
 
-# 5. Start
+# 5. Start (with Caddy)
 make prod-cloud
+
+# OR start without container Caddy
+make prod-cloud-no-caddy
+```
+
+**Setup (Automated CI/CD):**
+```bash
+# Configure deployment in config/project.config.yaml
+# Set mode: self-hosted-cloud
+# See docs/CICD.md for complete guide
 ```
 
 **Benefits:**
@@ -488,8 +549,8 @@ Is this for development?
 ### Docker Dev: "Kong unhealthy"
 
 ```bash
-docker compose logs kong
-docker compose restart kong
+make logs-auth   # Check auth/Kong logs
+make restart     # Restart all services
 ```
 
 ### Cloud Dev: "Unauthorized"
@@ -510,7 +571,7 @@ curl https://xxxxx.supabase.co/rest/v1/ \
 dig nodes.yourchain.com
 
 # Check Caddy logs
-docker compose logs caddy
+make prod-logs
 
 # Verify ACME_EMAIL
 grep ACME_EMAIL .env
