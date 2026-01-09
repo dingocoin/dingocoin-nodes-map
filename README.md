@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/badge/GitHub-RaxTzu%2FAtlasP2P-blue)](https://github.com/RaxTzu/AtlasP2P)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-success)](https://raxtzu.github.io/AtlasP2P/)
+[![CI](https://github.com/RaxTzu/AtlasP2P/actions/workflows/ci.yml/badge.svg)](https://github.com/RaxTzu/AtlasP2P/actions/workflows/ci.yml)
 
 A professional, production-ready P2P network visualization platform for cryptocurrency blockchains. Monitor your network's health, discover nodes worldwide, and provide transparency to your community.
 
