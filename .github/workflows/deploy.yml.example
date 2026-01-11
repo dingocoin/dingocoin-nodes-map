@@ -224,13 +224,18 @@ jobs:
   prepare-env:
     name: Prepare Environment
     needs: [detect-config, auto-detect]
-    if: always() && needs.detect-config.result == 'success'
+    if: always() && needs.detect-config.result == 'success' && (needs.auto-detect.result == 'success' || needs.auto-detect.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       build_args: ${{ steps.extract.outputs.build_args }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
       - name: Resolve configuration
         id: resolve
