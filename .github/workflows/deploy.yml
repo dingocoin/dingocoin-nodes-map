@@ -341,6 +341,7 @@ jobs:
   build:
     name: Build Images
     needs: [detect-config, prepare-env]
+    if: needs.prepare-env.result == 'success'
     runs-on: ubuntu-latest
 
     steps:
