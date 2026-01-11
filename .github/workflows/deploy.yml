@@ -224,7 +224,7 @@ jobs:
   prepare-env:
     name: Prepare Environment
     needs: [detect-config, auto-detect]
-    if: always() && needs.detect-config.result == 'success'
+    if: always() && needs.detect-config.result == 'success' && (needs.auto-detect.result == 'success' || needs.auto-detect.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       build_args: ${{ steps.extract.outputs.build_args }}
