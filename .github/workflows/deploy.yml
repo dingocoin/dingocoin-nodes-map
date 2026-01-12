@@ -313,17 +313,14 @@ jobs:
                 BUILD_ARGS="$BUILD_ARGS --build-arg $key=\"$value\""
               fi
             done < .env.full
-            cp .env.full .env.production
+            cp .env.full deployment.env
           else
-            touch .env.production
+            touch deployment.env
           fi
           echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
 
       - name: Inject registry configuration
         run: |
-          # Ensure .env.production exists
-          touch .env.production
-
           # Extract IMAGE_PREFIX from repository names for docker-compose compatibility
           REPO_WEB="${{ needs.detect-config.outputs.repository_web }}"
 
@@ -339,7 +336,7 @@ jobs:
             REGISTRY="SET_BY_HOST_ECR_LOGIN"
           fi
 
-          cat >> .env.production << 'EOFREGISTRY'
+          cat >> deployment.env << 'EOFREGISTRY'
 
           # Docker Registry Configuration (injected by CI/CD)
           REGISTRY_TYPE=${{ needs.detect-config.outputs.registry_type }}
@@ -351,32 +348,14 @@ jobs:
           EOFREGISTRY
 
           # Verify file exists
-          ls -lh .env.production
-          echo "File size: $(wc -l < .env.production) lines"
-          echo "File content preview:"
-          head -5 .env.production
-
-      - name: Prepare artifact directory
-        run: |
-          echo "==> Creating artifacts directory"
-          mkdir -p /tmp/deploy-artifacts
-
-          echo "==> Copying .env.production to artifacts directory"
-          cp .env.production /tmp/deploy-artifacts/
-
-          echo "==> Verifying copy"
-          ls -lh /tmp/deploy-artifacts/
-          cat /tmp/deploy-artifacts/.env.production | head -10
-
-          echo "==> File MD5 checksums"
-          echo "Source: $(md5sum .env.production | cut -d' ' -f1)"
-          echo "Target: $(md5sum /tmp/deploy-artifacts/.env.production | cut -d' ' -f1)"
+          ls -lh deployment.env
+          echo "File size: $(wc -l < deployment.env) lines"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: environment
-          path: /tmp/deploy-artifacts/.env.production
+          path: deployment.env
           retention-days: 1
 
   build:
@@ -498,7 +477,7 @@ jobs:
           scp -i ~/.ssh/deploy_key docker-compose.yml docker-compose.prod.yml docker-compose.cloud-prod.yml Makefile \
             "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
           if [ "$SECRETS_SOURCE" != "manual" ]; then
-            scp -i ~/.ssh/deploy_key .env.production "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
+            scp -i ~/.ssh/deploy_key deployment.env "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
           fi
 
       - name: Deploy
