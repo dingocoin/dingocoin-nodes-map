@@ -82,6 +82,7 @@ jobs:
       registry_type: ${{ steps.detect.outputs.registry_type }}
       registry_public: ${{ steps.detect.outputs.registry_public }}
       registry_region: ${{ steps.detect.outputs.registry_region }}
+      chain: ${{ steps.detect.outputs.chain }}
 
     steps:
       - uses: actions/checkout@v4
@@ -115,10 +116,14 @@ jobs:
           REGISTRY_PUBLIC=$(yq '.deployment.registry.public' "$CONFIG_FILE")
           REGISTRY_REGION=$(yq '.deployment.registry.region' "$CONFIG_FILE")
 
+          # Chain name for ECR repository naming
+          CHAIN=$(yq '.chain' "$CONFIG_FILE")
+
           # Defaults if not set
           [ "$REGISTRY_TYPE" = "null" ] && REGISTRY_TYPE="ghcr"
           [ "$REGISTRY_PUBLIC" = "null" ] && REGISTRY_PUBLIC="true"
           [ "$REGISTRY_REGION" = "null" ] && REGISTRY_REGION="us-east-1"
+          [ "$CHAIN" = "null" ] && CHAIN="atlasp2p"
 
           # Apply overrides from workflow inputs (safe - enum restricted)
           [ -n "$OVERRIDE_MODE" ] && DEPLOYMENT_MODE="$OVERRIDE_MODE"
@@ -154,6 +159,7 @@ jobs:
           echo "registry_type=$REGISTRY_TYPE" >> $GITHUB_OUTPUT
           echo "registry_public=$REGISTRY_PUBLIC" >> $GITHUB_OUTPUT
           echo "registry_region=$REGISTRY_REGION" >> $GITHUB_OUTPUT
+          echo "chain=$CHAIN" >> $GITHUB_OUTPUT
 
           # Summary
           echo "### 🎯 Deployment Configuration" >> $GITHUB_STEP_SUMMARY
@@ -384,15 +390,16 @@ jobs:
           # Lowercase for Docker registry compatibility
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          CHAIN_LOWER=$(echo "${{ needs.detect-config.outputs.chain }}" | tr '[:upper:]' '[:lower:]')
 
           if [ "${{ needs.detect-config.outputs.registry_type }}" = "ghcr" ]; then
             # GHCR: ghcr.io/owner/repo-service:latest
             REGISTRY="ghcr.io/${OWNER_LOWER}"
             IMAGE_PREFIX="${REPO_LOWER}-"
           else
-            # ECR: 123456789.dkr.ecr.region.amazonaws.com/repo/service:latest
+            # ECR: 123456789.dkr.ecr.region.amazonaws.com/chain/nodes-map-service:latest
             REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-            IMAGE_PREFIX="${REPO_LOWER}/"
+            IMAGE_PREFIX="${CHAIN_LOWER}/nodes-map-"
           fi
 
           echo "registry=${REGISTRY}" >> $GITHUB_OUTPUT
