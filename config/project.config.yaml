@@ -506,7 +506,7 @@ deployment:
   caddy:
     enabled: true
     # Mode: container (Caddy in Docker) or host (system Caddy via systemctl)
-    mode: container
+    mode: host
 
   # Secrets management
   secrets:
