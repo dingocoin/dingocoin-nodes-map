@@ -420,6 +420,7 @@ jobs:
   deploy:
     name: Deploy
     needs: [detect-config, prepare-env, build]
+    if: needs.prepare-env.result == 'success' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment: production
 
