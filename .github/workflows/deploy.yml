@@ -226,6 +226,7 @@ jobs:
     needs: [detect-config, auto-detect]
     if: always() && needs.detect-config.result == 'success' && (needs.auto-detect.result == 'success' || needs.auto-detect.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       build_args: ${{ steps.extract.outputs.build_args }}
 
@@ -343,6 +344,7 @@ jobs:
     needs: [detect-config, prepare-env]
     if: needs.prepare-env.result == 'success'
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - uses: actions/checkout@v4
