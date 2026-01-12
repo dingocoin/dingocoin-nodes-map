@@ -356,30 +356,27 @@ jobs:
           echo "File content preview:"
           head -5 .env.production
 
-      - name: Debug before upload
+      - name: Prepare artifact directory
         run: |
-          echo "==> Current working directory:"
-          pwd
-          echo "==> Files in current directory:"
-          ls -la
-          echo "==> Checking .env.production:"
-          if [ -f .env.production ]; then
-            echo "File exists!"
-            ls -lh .env.production
-            echo "First 10 lines:"
-            head -10 .env.production
-          else
-            echo "File does NOT exist!"
-          fi
-          echo "==> Workspace directory:"
-          echo "${{ github.workspace }}"
-          ls -la "${{ github.workspace }}" | grep -E '\.env|production' || echo "No .env files found"
+          echo "==> Creating artifacts directory"
+          mkdir -p /tmp/deploy-artifacts
+
+          echo "==> Copying .env.production to artifacts directory"
+          cp .env.production /tmp/deploy-artifacts/
+
+          echo "==> Verifying copy"
+          ls -lh /tmp/deploy-artifacts/
+          cat /tmp/deploy-artifacts/.env.production | head -10
+
+          echo "==> File MD5 checksums"
+          echo "Source: $(md5sum .env.production | cut -d' ' -f1)"
+          echo "Target: $(md5sum /tmp/deploy-artifacts/.env.production | cut -d' ' -f1)"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: environment
-          path: ${{ github.workspace }}/.env.production
+          path: /tmp/deploy-artifacts/.env.production
           retention-days: 1
 
   build:
