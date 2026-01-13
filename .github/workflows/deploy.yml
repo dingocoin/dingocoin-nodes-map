@@ -321,23 +321,15 @@ jobs:
 
       - name: Inject registry configuration
         run: |
-          # Get config from detect-config outputs
           REGISTRY_TYPE="${{ needs.detect-config.outputs.registry_type }}"
           REGISTRY_PUBLIC="${{ needs.detect-config.outputs.registry_public }}"
           REGISTRY_REGION="${{ needs.detect-config.outputs.registry_region }}"
           REPO_WEB="${{ needs.detect-config.outputs.repository_web }}"
 
-          # Extract IMAGE_PREFIX for docker-compose
-          # docker-compose uses: ${IMAGE_PREFIX}web (appends 'web')
-          # So strip 'web' suffix from repo name to get prefix
           IMAGE_PREFIX="${REPO_WEB%web}"
 
-          # Write registry config to deployment.env
-          # For GHCR: Write REGISTRY=ghcr.io
-          # For ECR: DON'T write REGISTRY - let AWS SSM provide it (avoids duplicates/overwrites)
           cat >> deployment.env << EOF
 
-          # Docker Registry Configuration (injected by CI/CD)
           REGISTRY_TYPE=${REGISTRY_TYPE}
           REGISTRY_PUBLIC=${REGISTRY_PUBLIC}
           REGISTRY_REGION=${REGISTRY_REGION}
@@ -345,12 +337,10 @@ jobs:
           IMAGE_TAG=latest
           EOF
 
-          # For GHCR only: Add REGISTRY value
           if [ "$REGISTRY_TYPE" = "ghcr" ]; then
             echo "REGISTRY=ghcr.io" >> deployment.env
           fi
 
-          # Verify file contents
           echo "=== deployment.env registry config ==="
           tail -7 deployment.env
           echo "=== File size: $(wc -l < deployment.env) lines ==="
@@ -394,16 +384,14 @@ jobs:
         if: needs.detect-config.outputs.secrets_source != 'manual'
         id: next_public
         run: |
-          # Extract NEXT_PUBLIC vars and format for build-args
           BUILD_ARGS=""
           while IFS='=' read -r key value; do
             if [[ $key == NEXT_PUBLIC_* ]]; then
               BUILD_ARGS="${BUILD_ARGS}${key}=${value}"$'\n'
-              echo "${key}=***" # Masked for logs
+              echo "${key}=***"
             fi
           done < deployment.env
 
-          # Save to output (multiline)
           echo "build_args<<EOF" >> $GITHUB_OUTPUT
           echo "$BUILD_ARGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
