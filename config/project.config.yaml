@@ -517,16 +517,16 @@ deployment:
 
   # Docker Registry configuration
   registry:
-    # Registry type: ghcr (GitHub Container Registry) - free, no AWS needed
-    type: ghcr
-    # GHCR public images - free unlimited storage
-    public: true
-    # Region not needed for GHCR
+    # Registry type: ecr (AWS Elastic Container Registry)
+    type: ecr
+    # ECR images are private by default
+    public: false
+    # AWS region for ECR
     region: us-west-2
-    # Repository names for each service (format: owner/repo-name)
+    # Repository names for each service
     repositories:
-      web: ravianxreaver/dingocoin-nodes-map-web
-      crawler: ravianxreaver/dingocoin-nodes-map-crawler
+      web: dingocoin/nodes-map-web
+      crawler: dingocoin/nodes-map-crawler
 
   # Health checks and validation
   healthCheck:

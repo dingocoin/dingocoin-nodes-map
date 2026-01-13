@@ -62,7 +62,6 @@ on:
         default: false
 
 env:
-  REGISTRY: ghcr.io
   NODE_VERSION: '20'
   # GitHub Environment name configured via DEPLOYMENT_ENVIRONMENT repository variable
   # Defaults to 'production' if not set. Create environment in Settings → Environments.
