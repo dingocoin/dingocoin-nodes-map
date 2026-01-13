@@ -390,6 +390,24 @@ jobs:
           grep "^NEXT_PUBLIC" deployment.env || echo "WARNING: No NEXT_PUBLIC vars found!"
           echo "=== Total lines: $(wc -l < deployment.env) ==="
 
+      - name: Extract NEXT_PUBLIC vars for build
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        id: next_public
+        run: |
+          # Extract NEXT_PUBLIC vars and format for build-args
+          BUILD_ARGS=""
+          while IFS='=' read -r key value; do
+            if [[ $key == NEXT_PUBLIC_* ]]; then
+              BUILD_ARGS="${BUILD_ARGS}${key}=${value}"$'\n'
+              echo "${key}=***" # Masked for logs
+            fi
+          done < deployment.env
+
+          # Save to output (multiline)
+          echo "build_args<<EOF" >> $GITHUB_OUTPUT
+          echo "$BUILD_ARGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -442,6 +460,7 @@ jobs:
           tags: ${{ steps.registry.outputs.web_image }}
           build-args: |
             CACHEBUST=${{ github.sha }}
+            ${{ steps.next_public.outputs.build_args || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

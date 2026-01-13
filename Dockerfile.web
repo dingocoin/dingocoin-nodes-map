@@ -45,9 +45,21 @@ COPY --from=deps /app/packages/config/node_modules ./packages/config/node_module
 COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
 COPY . .
 
-# Copy deployment.env from workflow artifact as .env.production
-# Next.js will load this during build to bake NEXT_PUBLIC_* into JS bundle
-# File is created by prepare-env job with values from SSM/GitHub Secrets
+# Accept NEXT_PUBLIC_* vars as build args (passed from GitHub Actions)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_ENABLE_TURNSTILE
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS
+
+# Export as ENV so Next.js build can access them
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS
+
+# Also copy deployment.env as fallback (for non-NEXT_PUBLIC vars)
 COPY deployment.env .env.production
 
 ENV NEXT_TELEMETRY_DISABLED=1
