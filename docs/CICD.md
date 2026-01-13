@@ -76,34 +76,16 @@ sudo usermod -aG docker $USER
 
 #### **Required GitHub Variables** (Settings → Secrets and variables → Actions → Variables)
 
-**Deployment Variables:**
 ```bash
 DEPLOY_USER=ubuntu              # SSH username
 DEPLOY_HOST=nodes.example.com   # Server IP or domain
 DEPLOY_PATH=/opt/atlasp2p       # Deployment directory on server
 ```
 
-**Registry Variables (GENERIC - work with any registry):**
-```bash
-REGISTRY_TYPE=ecr                        # Registry type: ecr or ghcr
-REGISTRY_PUBLIC=false                    # Whether registry is public (ghcr only)
-REGISTRY_REGION=us-west-2                # Region (ECR: AWS region, GHCR: ignored)
-REPOSITORY_WEB=dingocoin/nodes-map-web        # Repository name for web
-REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler # Repository name for crawler
-```
-
-**Note:** Registry variables can also be defined in `project.config.yaml`, but GitHub environment variables take precedence. Using GitHub variables is recommended for reliability and matches the Dingocoin-Ecosystem deployment pattern.
-
 #### **Required GitHub Secrets** (Settings → Secrets and variables → Actions → Secrets)
 
 ```bash
 SSH_PRIVATE_KEY=<your-private-key>  # SSH key for server access
-```
-
-**For ECR (if using AWS Elastic Container Registry):**
-```bash
-AWS_ACCESS_KEY_ID=AKIA...            # IAM user with ECR permissions
-AWS_SECRET_ACCESS_KEY=...            # Secret access key
 ```
 
 **Generate SSH key:**
@@ -176,7 +158,7 @@ AtlasP2P supports **three secrets management methods**:
    ```
 3. Configure GitHub variables:
    ```bash
-   REGISTRY_REGION=us-east-1
+   AWS_REGION=us-east-1
    ```
 4. Update `project.config.yaml`:
    ```yaml
@@ -240,17 +222,7 @@ nano .env  # Add all secrets manually
 
 ## 🐳 Docker Registry Configuration
 
-AtlasP2P supports **two Docker registry options** for production deployments.
-
-**Configuration Priority:**
-1. **GitHub Environment Variables** (Recommended) - Set in GitHub Settings → Environments → Production → Variables
-2. **project.config.yaml** (Fallback) - Used if GitHub variables not set
-
-**Why GitHub Variables?**
-- ✅ More reliable (no YAML parsing issues)
-- ✅ Deployment-specific (separate from public config)
-- ✅ Matches proven working pattern (Dingocoin-Ecosystem)
-- ✅ Easier to change without code commits
+AtlasP2P supports **two Docker registry options** for production deployments:
 
 ### Option 1: GitHub Container Registry (GHCR) - Recommended
 
@@ -292,32 +264,25 @@ ghcr.io/your-org/atlasp2p-crawler:latest
 
 **Best for:** Enterprise deployments, teams using AWS infrastructure
 
-**Configuration (GitHub Variables - Recommended):**
-
-Set these in GitHub Settings → Environments → Production → Variables:
-```bash
-REGISTRY_TYPE=ecr                              # Registry type
-REGISTRY_REGION=us-west-2                      # AWS region
-REPOSITORY_WEB=dingocoin/nodes-map-web     # Repository name for web
-REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler  # Repository name for crawler
-```
-
-Set these in GitHub Settings → Secrets:
-```bash
-AWS_ACCESS_KEY_ID=AKIA...                      # IAM user with ECR permissions
-AWS_SECRET_ACCESS_KEY=...                      # Secret access key
-```
-
-**Alternative Configuration (project.config.yaml - Fallback):**
+**Configuration:**
 ```yaml
-# config/project.config.yaml (used if GitHub variables not set)
+# config/project.config.yaml
 deployment:
   registry:
     type: ecr
-    region: us-west-2
-    repositories:
-      web: dingocoin/nodes-map-web
-      crawler: dingocoin/nodes-map-crawler
+    region: us-east-1  # Your AWS region
+    # public: ignored (ECR images are always private)
+```
+
+**Required GitHub Secrets (for CI/CD):**
+```bash
+AWS_ACCESS_KEY_ID=AKIA...       # IAM user with ECR push permissions
+AWS_SECRET_ACCESS_KEY=...       # Secret access key
+```
+
+**Required GitHub Variables:**
+```bash
+AWS_REGION=us-east-1            # ECR region
 ```
 
 **Image naming:**
@@ -375,53 +340,52 @@ aws configure
 
 **To switch from GHCR to ECR:**
 
-**Recommended Method (GitHub Variables):**
-1. Go to GitHub Settings → Environments → Production → Variables
-2. Add/update these variables:
-   ```bash
-   REGISTRY_TYPE=ecr
-   REGISTRY_REGION=us-west-2
-   REPOSITORY_WEB=dingocoin/nodes-map-web
-   REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler
-   ```
-3. Add AWS credentials to Secrets:
-   ```bash
-   AWS_ACCESS_KEY_ID=AKIA...
-   AWS_SECRET_ACCESS_KEY=...
-   ```
-4. Push any commit to trigger deployment - workflow automatically uses ECR!
-
-**Alternative Method (config file):**
-1. Update `project.config.yaml`:
+1. **Update config:**
    ```yaml
    deployment:
      registry:
        type: ecr
-       region: us-west-2
-       repositories:
-         web: dingocoin/nodes-map-web
-         crawler: dingocoin/nodes-map-crawler
+       region: us-east-1
    ```
-2. Commit and push
-3. Add AWS credentials to GitHub Secrets (if not already added)
+
+2. **Add GitHub Secrets:**
+   ```bash
+   AWS_ACCESS_KEY_ID=...
+   AWS_SECRET_ACCESS_KEY=...
+   ```
+
+3. **Add GitHub Variables:**
+   ```bash
+   AWS_REGION=us-east-1
+   ```
+
+4. **Commit and push:**
+   ```bash
+   git add config/project.config.yaml
+   git commit -m "Switch to ECR registry"
+   git push origin master
+   ```
+
+5. **Next deployment:** Workflow automatically uses ECR!
 
 **To switch from ECR to GHCR:**
 
-**Recommended Method (GitHub Variables):**
-1. Go to GitHub Settings → Environments → Production → Variables
-2. Update `REGISTRY_TYPE=ghcr`
-3. Optionally add `REGISTRY_PUBLIC=true`
-4. Push any commit - workflow automatically uses GHCR!
-
-**Alternative Method (config file):**
-1. Update `project.config.yaml`:
+1. **Update config:**
    ```yaml
    deployment:
      registry:
        type: ghcr
        public: true
    ```
-2. Commit and push
+
+2. **Commit and push:**
+   ```bash
+   git add config/project.config.yaml
+   git commit -m "Switch to GHCR registry"
+   git push origin master
+   ```
+
+3. **Next deployment:** Workflow automatically uses GHCR!
 
 ### Registry Variables Injected to .env
 
@@ -489,43 +453,10 @@ aws ecr create-repository --repository-name atlasp2p/crawler --region us-east-1
 
 #### "Invalid registry type"
 
-**Check GitHub variables:**
-```bash
-# GitHub → Settings → Environments → Production → Variables
-REGISTRY_TYPE=ecr  # Must be exactly "ecr" or "ghcr" (lowercase)
-```
-
-**Or check config:**
+**Check config:**
 ```yaml
 registry:
   type: ghcr  # Must be exactly "ghcr" or "ecr" (lowercase)
-```
-
-#### "Images going to GHCR instead of ECR"
-
-This happens when registry configuration isn't being read correctly.
-
-**Solution 1: Use GitHub Environment Variables (Recommended)**
-```bash
-# GitHub → Settings → Environments → Production → Variables
-REGISTRY_TYPE=ecr
-REGISTRY_REGION=us-west-2
-REPOSITORY_WEB=your-org/nodes-map-web
-REPOSITORY_CRAWLER=your-org/nodes-map-crawler
-```
-
-**Solution 2: Debug workflow**
-```bash
-# Check workflow logs in GitHub Actions
-# Look for "detect-config" job output
-# Verify registry_type output is "ecr" not "ghcr"
-```
-
-**Solution 3: Verify Environment**
-```bash
-# Ensure you're using "Production" environment
-# GitHub → Settings → Environments → Production
-# Variable DEPLOYMENT_ENVIRONMENT=production (optional, defaults to production)
 ```
 
 ---
@@ -787,6 +718,59 @@ docker compose up -d
 caddy:
   mode: container  # Force container mode
 ```
+
+### Containers Using Old Configuration After Deployment
+
+**Symptom:** Deployment completes successfully, images are pulled from registry, but containers use old configuration (wrong ports, old seed nodes, etc.).
+
+**Root Cause:** Docker Compose with both `build:` and `image:` directives prefers building locally even when images are pulled. The `build: null` pattern doesn't fully remove the build context.
+
+**Verification:**
+```bash
+# On server, check which image is actually running:
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.ID}}"
+
+# Check image SHA - should match registry, not local build:
+docker inspect atlasp2p-web | grep -A5 "Image"
+docker images | grep atlasp2p-web
+
+# If images show different SHAs, containers are using local builds
+```
+
+**Solution (Already Fixed):**
+
+This issue was resolved in commit `741ea44` with the following changes:
+
+1. **docker-compose.prod.yml**: Fully redeclared `web` and `crawler` services with all necessary directives (volumes, depends_on, environment, healthcheck) to override base config without inheritance
+2. **Makefile**: Added `--no-build` flag to all production targets (`prod-docker`, `prod-docker-no-caddy`, `prod-cloud`, `prod-cloud-no-caddy`, `prod-restart`)
+
+**Manual Fix (if using older version):**
+
+```bash
+# On server:
+cd /opt/atlasp2p
+
+# Stop containers
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+# Remove locally built images
+docker rmi $(docker images --filter "reference=atlasp2p-*" -q) 2>/dev/null || true
+
+# Pull fresh images
+docker pull ${REGISTRY}/${IMAGE_PREFIX}web:latest
+docker pull ${REGISTRY}/${IMAGE_PREFIX}crawler:latest
+
+# Start with --no-build flag
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate --no-build
+
+# Verify containers use registry images
+docker ps --format "table {{.Names}}\t{{.Image}}"
+```
+
+**Prevention:**
+- Always use `make prod-docker-no-caddy` or equivalent Make targets (they include `--no-build`)
+- Never run `docker compose up` directly without `--no-build` in production
+- Verify image SHAs after deployment match registry
 
 ---
 
