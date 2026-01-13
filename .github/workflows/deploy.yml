@@ -534,18 +534,28 @@ jobs:
 
             if [ "${{ needs.detect-config.outputs.backup_enabled }}" = "true" ]; then
               echo ""
-              echo "==> Checking if database exists..."
-              if docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p; then
-                echo "Database exists, creating backup..."
-                mkdir -p backups
-                BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
-                if docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}"; then
+              echo "==> Attempting database backup..."
+              mkdir -p backups
+              BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
+
+              set +e
+              docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p 2>/dev/null
+              DB_EXISTS=\$?
+              set -e
+
+              if [ \$DB_EXISTS -eq 0 ]; then
+                set +e
+                docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}" 2>/dev/null
+                BACKUP_STATUS=\$?
+                set -e
+
+                if [ \$BACKUP_STATUS -eq 0 ]; then
                   echo "✓ Backup created: \${BACKUP_FILE} (\$(wc -l < \${BACKUP_FILE}) lines)"
                 else
-                  echo "WARNING: Backup failed (non-fatal)"
+                  echo "⚠ Backup failed (non-fatal)"
                 fi
               else
-                echo "Database doesn't exist yet (first deployment?), skipping backup"
+                echo "⚠ Database not found or not ready, skipping backup (non-fatal)"
               fi
             fi
 
