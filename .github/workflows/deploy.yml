@@ -274,6 +274,9 @@ jobs:
           [ ! -f "$CONFIG_FILE" ] && CONFIG_FILE="config/project.config.yaml.example"
           SSM_PATH=$(yq '.deployment.secrets.ssmPath' "$CONFIG_FILE")
           aws ssm get-parameter --name "$SSM_PATH" --with-decryption --query 'Parameter.Value' --output text > .env.full
+          echo "=== SSM Fetched - Checking for NEXT_PUBLIC vars ==="
+          grep "^NEXT_PUBLIC" .env.full || echo "ERROR: No NEXT_PUBLIC vars in SSM!"
+          echo "=== Total env vars in SSM: $(grep -c '^[A-Z]' .env.full) ==="
 
       - name: Create from GitHub Secrets
         if: steps.resolve.outputs.secrets_source == 'github-secrets'
@@ -383,8 +386,9 @@ jobs:
         if: needs.detect-config.outputs.secrets_source != 'manual'
         run: |
           ls -la deployment.env
-          echo "Contents preview:"
-          head -5 deployment.env
+          echo "=== Checking for NEXT_PUBLIC vars ==="
+          grep "^NEXT_PUBLIC" deployment.env || echo "WARNING: No NEXT_PUBLIC vars found!"
+          echo "=== Total lines: $(wc -l < deployment.env) ==="
 
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3

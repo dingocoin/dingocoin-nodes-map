@@ -273,6 +273,9 @@ jobs:
           [ ! -f "$CONFIG_FILE" ] && CONFIG_FILE="config/project.config.yaml.example"
           SSM_PATH=$(yq '.deployment.secrets.ssmPath' "$CONFIG_FILE")
           aws ssm get-parameter --name "$SSM_PATH" --with-decryption --query 'Parameter.Value' --output text > .env.full
+          echo "=== SSM Fetched - Checking for NEXT_PUBLIC vars ==="
+          grep "^NEXT_PUBLIC" .env.full || echo "ERROR: No NEXT_PUBLIC vars in SSM!"
+          echo "=== Total env vars in SSM: $(grep -c '^[A-Z]' .env.full) ==="
 
       - name: Create from GitHub Secrets
         if: steps.resolve.outputs.secrets_source == 'github-secrets'
