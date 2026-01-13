@@ -451,7 +451,6 @@ jobs:
             CACHEBUST=${{ github.sha }}
             ${{ steps.next_public.outputs.build_args || '' }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build crawler
         uses: docker/build-push-action@v6
@@ -461,7 +460,6 @@ jobs:
           push: true
           tags: ${{ steps.registry.outputs.crawler_image }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy
