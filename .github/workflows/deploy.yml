@@ -559,7 +559,21 @@ jobs:
 
             echo ""
             echo "==> Loading registry configuration..."
-            source .env
+
+            if [ ! -f .env ]; then
+              echo "ERROR: .env file not found in \$(pwd)"
+              echo "Files in directory:"
+              ls -la
+              exit 1
+            fi
+
+            if ! source .env; then
+              echo "ERROR: Failed to source .env file"
+              echo ".env contents:"
+              head -20 .env
+              exit 1
+            fi
+
             REGISTRY_TYPE=\${REGISTRY_TYPE:-ghcr}
             REGISTRY_PUBLIC=\${REGISTRY_PUBLIC:-true}
             REGISTRY_REGION=\${REGISTRY_REGION:-us-east-1}
