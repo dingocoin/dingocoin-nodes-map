@@ -23,7 +23,7 @@ chain: dingocoin
 chainConfig:
   name: Dingocoin
   ticker: DINGO
-  p2pPort: 34646
+  p2pPort: 33117
   rpcPort: 34645
   protocolVersion: 70144
   currentVersion: "1.18.0"
@@ -43,19 +43,21 @@ chainConfig:
   addressPrefix: "D"
   pubKeyHash: "1e"  # Dingocoin uses 0x1e for addresses starting with '1'
 
-  # DNS seeds for P2P peer discovery
   dnsSeeds:
     - seed1.dingocoin.com
     - seed2.dingocoin.com
     - seed3.dingocoin.com
     - vps.dingocoin.com
-    - australiacash.org
 
-  # Known seed nodes (IP:port format) - these are crawled directly
-  # Useful for ensuring specific nodes are always discovered
-  # Add your own nodes or well-known community nodes here
   seedNodes:
-    - "127.0.0.1:34646"
+    - "161.43.201.255:33117"
+    - "209.126.81.147:33117"
+    - "195.206.229.92:33117"
+    - "68.195.18.155:33117"
+    - "140.82.61.211:33117"
+    - "45.134.22.48:33117"
+    - "157.90.181.171:33117"
+    - "173.17.209.112:33117"
 
   # P2P Protocol Configuration (Crawler)
   # magicBytes: Network magic bytes in hex (4 bytes, e.g., "f9beb4d9" for Bitcoin)
