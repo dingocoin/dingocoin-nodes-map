@@ -137,7 +137,7 @@ jobs:
           [ -n "$OVERRIDE_SECRETS" ] && SECRETS_SOURCE="$OVERRIDE_SECRETS"
           [ "$SKIP_BACKUP" = "true" ] && BACKUP_ENABLED="false"
 
-          # Determine Make target and backup availability
+          # Determine Make target
           case "$DEPLOYMENT_MODE" in
             "self-hosted-docker")
               if [ "$CADDY_MODE" = "container" ] || [ "$CADDY_MODE" = "auto" ]; then
@@ -152,7 +152,7 @@ jobs:
               else
                 MAKE_TARGET="prod-cloud-no-caddy"
               fi
-              BACKUP_ENABLED="false"
+              [ "$BACKUP_ENABLED" != "false" ] && BACKUP_ENABLED="false"
               ;;
           esac
 
@@ -534,13 +534,18 @@ jobs:
 
             if [ "${{ needs.detect-config.outputs.backup_enabled }}" = "true" ]; then
               echo ""
-              echo "==> Creating database backup..."
-              mkdir -p backups
-              BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
-              if docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}"; then
-                echo "✓ Backup created: \${BACKUP_FILE} (\$(wc -l < \${BACKUP_FILE}) lines)"
+              echo "==> Checking if database exists..."
+              if docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p; then
+                echo "Database exists, creating backup..."
+                mkdir -p backups
+                BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
+                if docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}"; then
+                  echo "✓ Backup created: \${BACKUP_FILE} (\$(wc -l < \${BACKUP_FILE}) lines)"
+                else
+                  echo "WARNING: Backup failed (non-fatal)"
+                fi
               else
-                echo "WARNING: Backup failed (non-fatal)"
+                echo "Database doesn't exist yet (first deployment?), skipping backup"
               fi
             fi
 
