@@ -328,25 +328,23 @@ jobs:
           # So strip 'web' suffix from repo name to get prefix
           IMAGE_PREFIX="${REPO_WEB%web}"
 
-          # Determine REGISTRY value based on type
-          if [ "$REGISTRY_TYPE" = "ghcr" ]; then
-            REGISTRY="ghcr.io"
-          else
-            # For ECR: host determines registry URL after ECR login
-            REGISTRY="SET_BY_HOST_ECR_LOGIN"
-          fi
-
-          # Write ACTUAL VALUES to deployment.env (NO variable references!)
+          # Write registry config to deployment.env
+          # For GHCR: Write REGISTRY=ghcr.io
+          # For ECR: DON'T write REGISTRY - let AWS SSM provide it (avoids duplicates/overwrites)
           cat >> deployment.env << EOF
 
           # Docker Registry Configuration (injected by CI/CD)
           REGISTRY_TYPE=${REGISTRY_TYPE}
           REGISTRY_PUBLIC=${REGISTRY_PUBLIC}
           REGISTRY_REGION=${REGISTRY_REGION}
-          REGISTRY=${REGISTRY}
           IMAGE_PREFIX=${IMAGE_PREFIX}
           IMAGE_TAG=latest
           EOF
+
+          # For GHCR only: Add REGISTRY value
+          if [ "$REGISTRY_TYPE" = "ghcr" ]; then
+            echo "REGISTRY=ghcr.io" >> deployment.env
+          fi
 
           # Verify file contents
           echo "=== deployment.env registry config ==="
@@ -525,33 +523,21 @@ jobs:
             # Smart authentication based on registry type
             if [ "$REGISTRY_TYPE" = "ecr" ]; then
               echo "==> Authenticating to ECR..."
-              # Try host AWS CLI first (Dingocoin-Ecosystem pattern)
+              echo "==> Registry: ${REGISTRY}"
+
+              # ECR login with host AWS CLI or credentials from .env
               if command -v aws &> /dev/null; then
                 echo "==> Using host AWS CLI for ECR login"
                 aws ecr get-login-password --region ${REGISTRY_REGION} | \
                   docker login --username AWS --password-stdin ${REGISTRY}
-
-                # Get actual ECR registry URL and update .env
-                ECR_REGISTRY=$(aws ecr describe-repositories --region ${REGISTRY_REGION} \
-                  --query 'repositories[0].repositoryUri' --output text 2>/dev/null | cut -d'/' -f1)
-                if [ -n "$ECR_REGISTRY" ]; then
-                  REGISTRY=$ECR_REGISTRY
-                  sed -i "s|^REGISTRY=.*|REGISTRY=${REGISTRY}|" .env
-                  echo "==> Updated REGISTRY to: ${REGISTRY}"
-                fi
+              elif [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
+                echo "==> Using AWS credentials from .env"
+                export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=${REGISTRY_REGION}
+                aws ecr get-login-password --region ${REGISTRY_REGION} | \
+                  docker login --username AWS --password-stdin ${REGISTRY}
               else
-                echo "WARNING: AWS CLI not found on host."
-                echo "==> Attempting ECR login with credentials from .env (if available)..."
-                # If AWS credentials are in .env, configure AWS CLI
-                if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
-                  export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=${REGISTRY_REGION}
-                  aws ecr get-login-password --region ${REGISTRY_REGION} | \
-                    docker login --username AWS --password-stdin ${REGISTRY} || \
-                    echo "ERROR: ECR login failed. Ensure AWS credentials are valid."
-                else
-                  echo "ERROR: No AWS credentials available. Set up AWS CLI or add credentials to .env"
-                  exit 1
-                fi
+                echo "ERROR: No AWS CLI or credentials available"
+                exit 1
               fi
 
             elif [ "$REGISTRY_TYPE" = "ghcr" ]; then
