@@ -29,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       secrets_source: ${{ steps.detect.outputs.secrets_source }}
-      registry_type: ${{ steps.detect.outputs.registry_type }}
       backup_enabled: ${{ steps.detect.outputs.backup_enabled }}
       rollback_enabled: ${{ steps.detect.outputs.rollback_enabled }}
       health_check_enabled: ${{ steps.detect.outputs.health_check_enabled }}
@@ -56,7 +55,8 @@ jobs:
           fi
 
           SECRETS_SOURCE=$(yq '.deployment.secrets.source // "auto"' $CONFIG_FILE)
-          REGISTRY_TYPE=$(yq '.deployment.registry.type // "ghcr"' $CONFIG_FILE)
+          # NOTE: REGISTRY_TYPE now comes from SSM/deployment.env, not project.config.yaml
+          # This ensures SSM is the single source of truth for ALL runtime config
           BACKUP_ENABLED=$(yq '.deployment.backup.enabled // true' $CONFIG_FILE)
           ROLLBACK_ENABLED=$(yq '.deployment.rollback.enabled // true' $CONFIG_FILE)
           HEALTH_CHECK_ENABLED=$(yq '.deployment.healthCheck.enabled // true' $CONFIG_FILE)
@@ -64,7 +64,7 @@ jobs:
 
           # Auto-detect secrets source if set to "auto"
           if [ "$SECRETS_SOURCE" = "auto" ]; then
-            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ vars.AWS_ACCESS_KEY_ID }}" ]; then
+            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
               echo "Auto-detected: AWS SSM Parameter Store"
               SECRETS_SOURCE="aws-ssm"
             elif [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
@@ -77,19 +77,18 @@ jobs:
           fi
 
           echo "secrets_source=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
-          echo "registry_type=$REGISTRY_TYPE" >> $GITHUB_OUTPUT
           echo "backup_enabled=$BACKUP_ENABLED" >> $GITHUB_OUTPUT
           echo "rollback_enabled=$ROLLBACK_ENABLED" >> $GITHUB_OUTPUT
           echo "health_check_enabled=$HEALTH_CHECK_ENABLED" >> $GITHUB_OUTPUT
           echo "deployment_mode=$DEPLOYMENT_MODE" >> $GITHUB_OUTPUT
 
           echo "Configuration detected:"
-          echo "  Secrets: $SECRETS_SOURCE"
-          echo "  Registry: $REGISTRY_TYPE"
-          echo "  Backup: $BACKUP_ENABLED"
-          echo "  Rollback: $ROLLBACK_ENABLED"
-          echo "  Health Check: $HEALTH_CHECK_ENABLED"
+          echo "  Secrets Source: $SECRETS_SOURCE"
+          echo "  Backup Enabled: $BACKUP_ENABLED"
+          echo "  Rollback Enabled: $ROLLBACK_ENABLED"
+          echo "  Health Check Enabled: $HEALTH_CHECK_ENABLED"
           echo "  Deployment Mode: $DEPLOYMENT_MODE"
+          echo "  NOTE: Registry config comes from SSM/deployment.env (single source of truth)"
 
   # ===========================================
   # JOB 2: PREPARE ENV FROM AWS SSM
@@ -103,7 +102,7 @@ jobs:
     steps:
       - name: Fetch from AWS SSM
         env:
-          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
         run: |
@@ -121,24 +120,6 @@ jobs:
           fi
 
           echo "Successfully fetched $(wc -l < deployment.env) lines from SSM"
-
-          # Inject registry configuration from GitHub Variables
-          # IMAGE_PREFIX derived from REPOSITORY_WEB (remove 'web' suffix to get prefix)
-          REPO_WEB="${{ vars.REPOSITORY_WEB }}"
-          IMAGE_PREFIX="${REPO_WEB%web}"
-
-          echo "" >> deployment.env
-          echo "# Registry Configuration (injected by CI/CD)" >> deployment.env
-          echo "REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }}" >> deployment.env
-          echo "ECR_REGISTRY=${{ vars.REGISTRY }}" >> deployment.env
-          echo "REGISTRY=${{ vars.REGISTRY }}" >> deployment.env
-          echo "AWS_REGION=${{ vars.AWS_REGION }}" >> deployment.env
-          echo "AWS_ACCESS_KEY_ID=${{ vars.AWS_ACCESS_KEY_ID }}" >> deployment.env
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> deployment.env
-          echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> deployment.env
-          echo "IMAGE_TAG=latest" >> deployment.env
-
-          echo "Injected registry configuration (REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }}, IMAGE_PREFIX=$IMAGE_PREFIX)"
 
       - name: Upload env artifact
         uses: actions/upload-artifact@v4
@@ -293,6 +274,37 @@ jobs:
           echo "NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS" >> $GITHUB_OUTPUT
 
+      # Extract registry configuration from SSM artifact (single source of truth)
+      - name: Extract registry configuration
+        id: registry-config
+        run: |
+          if [ -f deployment.env ]; then
+            # Read registry config from SSM artifact
+            REGISTRY_TYPE=$(grep "^REGISTRY_TYPE=" deployment.env | cut -d'=' -f2 || echo "ghcr")
+            REGISTRY=$(grep "^REGISTRY=" deployment.env | cut -d'=' -f2 || echo "")
+            IMAGE_PREFIX=$(grep "^IMAGE_PREFIX=" deployment.env | cut -d'=' -f2 || echo "")
+
+            # For ECR, we need the full registry URL
+            if [ "$REGISTRY_TYPE" = "ecr" ]; then
+              ECR_REGISTRY=$(grep "^ECR_REGISTRY=" deployment.env | cut -d'=' -f2 || echo "$REGISTRY")
+              AWS_REGION=$(grep "^AWS_REGION=" deployment.env | cut -d'=' -f2 || echo "us-west-2")
+              echo "Registry: ECR ($ECR_REGISTRY)"
+            else
+              echo "Registry: GHCR"
+            fi
+          else
+            # Manual mode - default to GHCR
+            REGISTRY_TYPE="ghcr"
+            REGISTRY="ghcr.io"
+            IMAGE_PREFIX=""
+            echo "Registry: GHCR (default for manual mode)"
+          fi
+
+          echo "registry_type=$REGISTRY_TYPE" >> $GITHUB_OUTPUT
+          echo "registry=$REGISTRY" >> $GITHUB_OUTPUT
+          echo "image_prefix=$IMAGE_PREFIX" >> $GITHUB_OUTPUT
+          echo "Registry configuration extracted from SSM (single source of truth)"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         # Version auto-detected from package.json packageManager field
@@ -318,34 +330,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Conditional ECR authentication
+      # Conditional ECR authentication (registry_type from SSM artifact)
       - name: Configure AWS credentials (ECR)
-        if: needs.detect-config.outputs.registry_type == 'ecr'
+        if: steps.registry-config.outputs.registry_type == 'ecr'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Login to Amazon ECR
-        if: needs.detect-config.outputs.registry_type == 'ecr'
+        if: steps.registry-config.outputs.registry_type == 'ecr'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       # Default GHCR authentication
       - name: Login to GitHub Container Registry
-        if: needs.detect-config.outputs.registry_type == 'ghcr'
+        if: steps.registry-config.outputs.registry_type == 'ghcr' || steps.registry-config.outputs.registry_type == ''
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Set registry URL based on type
+      # Set registry URL based on type (from SSM artifact)
       - name: Set registry URL
         id: registry
         run: |
-          if [ "${{ needs.detect-config.outputs.registry_type }}" = "ecr" ]; then
+          if [ "${{ steps.registry-config.outputs.registry_type }}" = "ecr" ]; then
             echo "url=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_OUTPUT
           else
             echo "url=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
@@ -355,7 +367,7 @@ jobs:
         id: meta-web
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.registry.outputs.url }}/${{ vars.REPOSITORY_WEB }}
+          images: ${{ steps.registry.outputs.url }}/${{ env.IMAGE_NAME }}-web
           tags: |
             type=ref,event=branch
             type=sha,prefix=
@@ -376,7 +388,7 @@ jobs:
         id: meta-crawler
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.registry.outputs.url }}/${{ vars.REPOSITORY_CRAWLER }}
+          images: ${{ steps.registry.outputs.url }}/${{ env.IMAGE_NAME }}-crawler
           tags: |
             type=ref,event=branch
             type=sha,prefix=
@@ -412,11 +424,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Create database backup
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'BACKUP_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'BACKUP_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
@@ -427,7 +439,7 @@ jobs:
             BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql"
 
             echo "Creating database backup: $BACKUP_FILE"
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
+            docker compose -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
 
             # Verify backup was created
             if [ ! -s "$BACKUP_FILE" ]; then
@@ -462,7 +474,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       # Download env artifact if using SSM or GitHub Secrets
       - name: Download deployment.env artifact
@@ -476,12 +488,12 @@ jobs:
       - name: Copy .env to server
         if: needs.detect-config.outputs.secrets_source != 'manual'
         run: |
-          scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/.env
+          scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:${{ vars.DEPLOY_PATH }}/.env
           echo "Copied deployment.env to server"
 
       - name: Deploy application
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} \
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} \
             "DEPLOYMENT_MODE=${{ needs.detect-config.outputs.deployment_mode }}" \
             bash -s << 'DEPLOY_SCRIPT'
             set -e
@@ -489,7 +501,7 @@ jobs:
 
             echo "Loading environment configuration..."
             if [ -f .env ]; then
-              set -a  # Auto-export all variables
+              set -a  # Export all variables for subprocesses (aws cli, docker)
               source .env
               set +a
               echo "Environment loaded successfully"
@@ -497,14 +509,14 @@ jobs:
               echo "Warning: .env not found (manual mode)"
             fi
 
-            # Determine compose files based on deployment mode
+            # Determine compose file based on deployment mode
             DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-self-hosted-docker}"
             if [ "$DEPLOYMENT_MODE" = "self-hosted-cloud" ]; then
-              COMPOSE_FILES="-f docker-compose.yml -f docker-compose.cloud-prod.yml"
+              COMPOSE_FILE="docker-compose.cloud-prod.yml"
             else
-              COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+              COMPOSE_FILE="docker-compose.prod.yml"
             fi
-            echo "Using compose files: $COMPOSE_FILES"
+            echo "Using compose file: $COMPOSE_FILE"
 
             # Authenticate to registry
             if [ "$REGISTRY_TYPE" = "ecr" ]; then
@@ -519,18 +531,18 @@ jobs:
 
             # Pull latest images
             echo "Pulling latest images..."
-            docker compose $COMPOSE_FILES pull
+            docker compose -f "$COMPOSE_FILE" pull
 
             # Start services
             echo "Starting services..."
-            docker compose $COMPOSE_FILES up -d --remove-orphans
+            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
             # Wait for containers to start
             sleep 5
 
             # Verify containers are running
             echo "Verifying containers..."
-            docker compose $COMPOSE_FILES ps
+            docker compose -f "$COMPOSE_FILE" ps
 
             # Cleanup old images
             echo "Cleaning up old images..."
@@ -558,11 +570,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Run health checks
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'HEALTH_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'HEALTH_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
@@ -623,11 +635,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Rollback to previous state
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'ROLLBACK_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'ROLLBACK_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
@@ -645,24 +657,24 @@ jobs:
               echo "Restoring database from: $LATEST_BACKUP"
 
               # Stop containers to prevent writes during restore
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml stop web crawler
+              docker compose -f docker-compose.prod.yml stop web crawler
 
               # Restore database
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
+              docker compose -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
 
               echo "Database restored successfully"
             fi
 
             # Restart all containers (will use previous images since pull failed/was not done)
             echo "Restarting containers..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml restart
+            docker compose -f docker-compose.prod.yml restart
 
             # Wait for containers
             sleep 5
 
             # Verify containers are running
             echo "Container status:"
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml ps
 
             echo "====================================="
             echo "ROLLBACK COMPLETE"
