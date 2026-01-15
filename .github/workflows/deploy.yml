@@ -615,14 +615,15 @@ jobs:
           ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Run health checks
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'HEALTH_SCRIPT'
-            set -e
-            cd ${{ vars.DEPLOY_PATH }}
+          # Run health check via SSH with explicit exit code capture
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} "cd $DEPLOY_PATH && bash" << 'HEALTH_SCRIPT'
 
-            # Load health check config from .env
+            # Load health check config from .env (ignore errors in sourcing)
             if [ -f .env ]; then
-              source .env
+              source .env 2>/dev/null || true
             fi
 
             ENDPOINT="${HEALTH_CHECK_ENDPOINT:-/api/stats}"
@@ -636,26 +637,32 @@ jobs:
             echo "  Retries: $RETRIES"
             echo "  Port: $PORT"
 
-            # Retry loop
+            # Retry loop with explicit status tracking
+            check_passed=0
             for i in $(seq 1 $RETRIES); do
               echo ""
               echo "Attempt $i/$RETRIES..."
 
-              if curl -f -s --max-time $TIMEOUT "http://localhost:${PORT}${ENDPOINT}" > /dev/null; then
+              if curl -f -s --max-time "$TIMEOUT" "http://localhost:${PORT}${ENDPOINT}" > /dev/null 2>&1; then
                 echo "Health check PASSED!"
-                exit 0
+                check_passed=1
+                break
               fi
 
               echo "Health check failed"
-              if [ $i -lt $RETRIES ]; then
+              if [ "$i" -lt "$RETRIES" ]; then
                 echo "Waiting 10 seconds before retry..."
                 sleep 10
               fi
             done
 
-            echo ""
-            echo "Health check FAILED after $RETRIES attempts"
-            exit 1
+            if [ "$check_passed" -eq 1 ]; then
+              exit 0
+            else
+              echo ""
+              echo "Health check FAILED after $RETRIES attempts"
+              exit 1
+            fi
           HEALTH_SCRIPT
 
   # ===========================================
