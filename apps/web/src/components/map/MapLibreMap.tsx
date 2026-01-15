@@ -636,16 +636,16 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Map Style Switcher - Bottom Left, after stats panel (Desktop only) */}
-      <div className="hidden lg:block absolute bottom-4 left-[21.5rem] z-[40] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-3 border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
+      {/* Map Style Switcher - Bottom Right, above zoom controls (Desktop only) */}
+      <div className="hidden lg:block absolute bottom-36 right-4 z-[40] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-2 border border-border">
         <div
-          className="text-sm font-semibold text-muted-foreground px-0 py-2 mb-2"
+          className="text-xs font-medium text-muted-foreground px-1 mb-1.5"
           id="map-style-label"
         >
           Map Style
         </div>
         <div
-          className="flex flex-col gap-2"
+          className="flex gap-1"
           role="group"
           aria-labelledby="map-style-label"
         >
@@ -659,13 +659,13 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
                 aria-label={`Map Style: ${style.name}`}
                 aria-current={tileStyle === style.id ? 'true' : undefined}
                 title={style.description || `Switch to ${style.name} view`}
-                className={`px-4 py-2.5 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 flex items-center gap-2 ${
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary flex items-center gap-1.5 ${
                   tileStyle === style.id
-                    ? 'bg-primary text-white shadow-md font-semibold'
-                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-white shadow-sm font-semibold'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
-                {IconComponent && <IconComponent className="h-4 w-4" />}
+                {IconComponent && <IconComponent className="h-3.5 w-3.5" />}
                 <span>{style.name}</span>
               </button>
             );
