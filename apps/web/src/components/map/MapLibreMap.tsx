@@ -4,12 +4,12 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from 'next-themes';
-import Map, { Marker, NavigationControl, MapRef, Popup } from 'react-map-gl/maplibre';
+import Map, { Marker, MapRef, Popup } from 'react-map-gl/maplibre';
 import type { ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // @ts-ignore - supercluster doesn't have types but works fine
 import Supercluster from 'supercluster';
-import { Sun, Map as MapIcon, Moon, ChevronDown, Layers } from 'lucide-react';
+import { Sun, Map as MapIcon, Moon, ChevronDown, Layers, Plus, Minus } from 'lucide-react';
 import { useNodes } from '@/hooks/useNodes';
 import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig } from '@/config';
 import { getTierColor, getTierIcon } from '@/lib/theme-colors';
@@ -637,21 +637,23 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Map Style Dropdown - Bottom Right, above zoom controls (Desktop only) */}
-      <div className="hidden lg:block absolute bottom-36 right-4 z-[40]">
+      {/* Custom Map Controls - High z-index to stay above bottom sheet, positioned in visible map area */}
+      <div className="absolute right-3 sm:right-4 z-[70] flex flex-col gap-2 top-4 lg:top-auto lg:bottom-16">
+        {/* Map Style Dropdown */}
         <div className="relative">
           {/* Dropdown trigger button */}
           <button
             onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border hover:bg-card transition-colors"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border hover:bg-card transition-colors"
             aria-expanded={isStyleDropdownOpen}
             aria-haspopup="listbox"
+            title="Map Style"
           >
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium hidden sm:inline">
               {tileStyles.find(s => s.id === tileStyle)?.name || 'Style'}
             </span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isStyleDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform ${isStyleDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown menu */}
@@ -662,7 +664,7 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
                 className="fixed inset-0 z-[-1]"
                 onClick={() => setIsStyleDropdownOpen(false)}
               />
-              <div className="absolute bottom-full right-0 mb-2 w-44 bg-card/95 backdrop-blur-xl rounded-lg shadow-xl border border-border overflow-hidden">
+              <div className="absolute bottom-full right-0 mb-2 w-40 sm:w-44 bg-card/95 backdrop-blur-xl rounded-lg shadow-xl border border-border overflow-hidden">
                 <div className="py-1">
                   {tileStyles.map((style) => {
                     const IconComponent = style.icon ? THEME_ICONS[style.icon] : null;
@@ -696,6 +698,35 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
             </>
           )}
         </div>
+
+        {/* Zoom Controls */}
+        <div className="flex flex-col bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border overflow-hidden">
+          <button
+            onClick={() => {
+              if (viewState.zoom < mapConfig.maxZoom) {
+                setViewState(prev => ({ ...prev, zoom: Math.min(prev.zoom + 1, mapConfig.maxZoom), transitionDuration: 300 }));
+              }
+            }}
+            disabled={viewState.zoom >= mapConfig.maxZoom}
+            className="p-2 sm:p-2.5 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Zoom in"
+          >
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+          <div className="h-px bg-border" />
+          <button
+            onClick={() => {
+              if (viewState.zoom > mapConfig.minZoom) {
+                setViewState(prev => ({ ...prev, zoom: Math.max(prev.zoom - 1, mapConfig.minZoom), transitionDuration: 300 }));
+              }
+            }}
+            disabled={viewState.zoom <= mapConfig.minZoom}
+            className="p-2 sm:p-2.5 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Zoom out"
+          >
+            <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+        </div>
       </div>
 
       <Map
@@ -722,7 +753,7 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
         pitchWithRotate={false}
         touchPitch={false}
       >
-        <NavigationControl position="bottom-right" showCompass={false} />
+        {/* Using custom zoom controls instead of NavigationControl */}
 
         {/* Cluster Markers */}
         {clusterFeatures.map((clusterFeature) => {
