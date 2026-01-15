@@ -303,6 +303,19 @@ jobs:
           echo "registry_type=$REGISTRY_TYPE" >> $GITHUB_OUTPUT
           echo "registry=$REGISTRY" >> $GITHUB_OUTPUT
           echo "image_prefix=$IMAGE_PREFIX" >> $GITHUB_OUTPUT
+
+          # Determine image base name (ECR uses IMAGE_PREFIX, GHCR uses github.repository)
+          if [ "$REGISTRY_TYPE" = "ecr" ] && [ -n "$IMAGE_PREFIX" ]; then
+            # ECR: use IMAGE_PREFIX from SSM (e.g., dingocoin/nodes-map-)
+            echo "image_base=${IMAGE_PREFIX}" >> $GITHUB_OUTPUT
+            echo "Using ECR image prefix: $IMAGE_PREFIX"
+          else
+            # GHCR: use github repository name (e.g., owner/repo-)
+            REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            echo "image_base=${REPO_NAME}-" >> $GITHUB_OUTPUT
+            echo "Using GHCR image base: ${REPO_NAME}-"
+          fi
+
           echo "Registry configuration extracted from SSM (single source of truth)"
 
       - name: Setup pnpm
@@ -367,7 +380,8 @@ jobs:
         id: meta-web
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.registry.outputs.url }}/${{ env.IMAGE_NAME }}-web
+          # Use image_base from SSM for ECR, or github.repository for GHCR
+          images: ${{ steps.registry.outputs.url }}/${{ steps.registry-config.outputs.image_base }}web
           tags: |
             type=ref,event=branch
             type=sha,prefix=
@@ -388,7 +402,8 @@ jobs:
         id: meta-crawler
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.registry.outputs.url }}/${{ env.IMAGE_NAME }}-crawler
+          # Use image_base from SSM for ECR, or github.repository for GHCR
+          images: ${{ steps.registry.outputs.url }}/${{ steps.registry-config.outputs.image_base }}crawler
           tags: |
             type=ref,event=branch
             type=sha,prefix=
