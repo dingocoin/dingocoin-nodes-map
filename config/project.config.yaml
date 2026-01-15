@@ -64,7 +64,7 @@ chainConfig:
   # userAgentPatterns: List of regex patterns to match node user agents
   #   Each pattern should capture the version number as the last group
   #   Examples: "/Satoshi:([0-9.]+)/" for Bitcoin, "/(Dingocoin|Core):([0-9.]+)/" for your coin
-  magicBytes: "fbc0b6db"
+  magicBytes: "c1c1c1c1"
   userAgentPatterns:
     - "/(Dingocoin|Core):([0-9.]+)/"
 
