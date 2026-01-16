@@ -47,6 +47,12 @@ function AuthPageContent() {
     }
   }, [isAuthEnabled, router]);
 
+  // Reset Turnstile token when mode changes
+  useEffect(() => {
+    setTurnstileToken(null);
+    setError(null);
+  }, [mode]);
+
   // Check if user is already logged in
   useEffect(() => {
     const supabase = createClient();
@@ -450,6 +456,7 @@ function AuthPageContent() {
             {isTurnstileEnabled && mode !== 'forgot-password' && (
               <div className="flex justify-center">
                 <TurnstileWidget
+                  key={mode}
                   onSuccess={handleTurnstileSuccess}
                   onError={handleTurnstileError}
                   theme="auto"
