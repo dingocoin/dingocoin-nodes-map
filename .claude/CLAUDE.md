@@ -42,9 +42,45 @@ make prod-docker-no-caddy  # Deploy without Caddy
 - **Default push target: origin (AtlasP2P)**, NOT dingocoin-fork
 
 ### Code
-- Use `make docker-dev` instead of raw `docker compose up` for project commands
+- **ALWAYS use Makefile commands** - NEVER run raw `docker compose` or `pnpm` commands directly
 - No hardcoded chain-specific values (use `config/project.config.yaml`)
 - Ask before changing config or env vars
+
+### Makefile (MANDATORY)
+**NEVER run commands directly - ALWAYS use Makefile:**
+
+```bash
+# Setup (first time)
+make setup-docker      # Local Docker setup
+make setup-cloud       # Cloud Supabase setup
+make setup-fork        # Fork setup with upstream
+
+# Development
+make docker-dev        # Start development (Docker)
+make cloud-dev         # Start development (Cloud)
+make docker-sync       # Resync after pnpm add
+make logs              # View all logs
+make restart           # Restart services
+
+# Production
+make prod-docker           # Deploy with Caddy
+make prod-docker-no-caddy  # Deploy without Caddy
+make prod-cloud            # Cloud production
+
+# Utilities
+make sync-upstream     # Pull from AtlasP2P upstream (forks)
+make migrate           # Run database migrations
+make crawler           # Start crawler
+make lint              # Run linter
+make typecheck         # TypeScript checks
+make clean             # Clean Docker volumes
+```
+
+**Why Makefile?**
+- Handles complex docker-compose file combinations
+- Environment-specific configurations
+- Prevents common mistakes
+- Consistent commands across team
 
 ---
 
