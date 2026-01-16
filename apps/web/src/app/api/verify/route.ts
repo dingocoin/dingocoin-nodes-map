@@ -376,7 +376,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Verify the signature with chain-specific config
-      const result = verifyMessageSignature(
+      const result = await verifyMessageSignature(
         verification.challenge,
         address,
         signature,

@@ -1,10 +1,14 @@
-import * as ecc from 'tiny-secp256k1';
-import { ECPairFactory } from 'ecpair';
 import { createHash } from 'crypto';
 import { getChainConfig, getChain } from '@atlasp2p/config';
 
-// Initialize ECPair with secp256k1
-const ECPair = ECPairFactory(ecc);
+// Lazy load secp256k1 to avoid WASM loading errors at module import time
+let eccCache: any = null;
+async function getEcc() {
+  if (!eccCache) {
+    eccCache = await import('tiny-secp256k1');
+  }
+  return eccCache;
+}
 
 /**
  * Verification helper functions for node ownership verification
@@ -308,12 +312,12 @@ function base58Encode(buffer: Buffer): string {
  * @param networkConfig - Optional network configuration for non-Bitcoin chains
  * @returns Verification result
  */
-export function verifyMessageSignature(
+export async function verifyMessageSignature(
   message: string,
   address: string,
   signature: string,
   networkConfig?: NetworkConfig
-): VerificationResult {
+): Promise<VerificationResult> {
   try {
     // Validate inputs
     if (!message || !address || !signature) {
@@ -340,6 +344,9 @@ export function verifyMessageSignature(
 
     // Create message hash
     const hash = magicHash(message, config.messagePrefix);
+
+    // Lazy load secp256k1 (loads WASM at runtime, inside try-catch)
+    const ecc = await getEcc();
 
     // Recover public key from signature
     const publicKey = ecc.recover(hash, sigBytes, recovery, true);
