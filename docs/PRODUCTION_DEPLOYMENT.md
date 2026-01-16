@@ -230,6 +230,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
+# Cloudflare Turnstile (Bot Protection) - REQUIRED if enabled in config
+# Get keys at: https://dash.cloudflare.com/?to=/:account/turnstile
+TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+# Note: Site key goes in config/project.config.yaml (not .env)
+# See docs/TURNSTILE_SETUP.md for complete guide
+
 # Optional: Custom domain
 DOMAIN=nodes.dingocoin.com
 ACME_EMAIL=admin@dingocoin.com

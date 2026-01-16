@@ -78,7 +78,7 @@ sudo usermod -aG docker $USER
 
 ```bash
 DEPLOY_USER=ubuntu              # SSH username
-DEPLOY_HOST=nodes.example.com   # Server IP or domain
+SSH_HOST=nodes.example.com      # Server IP or domain
 DEPLOY_PATH=/opt/atlasp2p       # Deployment directory on server
 ```
 
@@ -187,6 +187,7 @@ ACME_EMAIL=admin@example.com
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+TURNSTILE_SECRET_KEY=...  # Cloudflare Turnstile (if enabled)
 POSTGRES_PASSWORD=...
 JWT_SECRET=...
 SMTP_HOST=...
@@ -897,7 +898,7 @@ notifications:
 
 - [ ] Fork AtlasP2P repository
 - [ ] Edit `config/project.config.yaml` (deployment section)
-- [ ] Add GitHub Variables: `DEPLOY_USER`, `DEPLOY_HOST`, `DEPLOY_PATH`
+- [ ] Add GitHub Variables: `DEPLOY_USER`, `SSH_HOST`, `DEPLOY_PATH`
 - [ ] Add GitHub Secret: `SSH_PRIVATE_KEY`
 - [ ] Choose secrets method and configure (SSM / GitHub Secrets / manual)
 - [ ] Commit config: `git add -f config/project.config.yaml && git commit`

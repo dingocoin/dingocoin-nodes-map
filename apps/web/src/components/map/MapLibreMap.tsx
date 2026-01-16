@@ -38,6 +38,12 @@ function iconNameToComponent(iconName: string): any {
 interface MapLibreMapProps {
   viewMode: 'map' | 'globe';
   onNodeClick?: (node: NodeWithProfile) => void;
+  isBottomSheetMinimized?: boolean;
+  bottomSheetHeight?: number;
+  isDraggingSheet?: boolean;
+  tileStyle?: string;
+  mapZoom?: number;
+  onZoomChange?: (zoom: number) => void;
 }
 
 interface ClusterFeature {
@@ -95,7 +101,16 @@ interface MetaClusterState {
   totalCount: number;
 }
 
-export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps) {
+export default function MapLibreMap({
+  viewMode,
+  onNodeClick,
+  isBottomSheetMinimized = true,
+  bottomSheetHeight = 48,
+  isDraggingSheet = false,
+  tileStyle: propTileStyle,
+  mapZoom: propMapZoom,
+  onZoomChange
+}: MapLibreMapProps) {
   const { nodes, isLoading, error } = useNodes();
   const mapRef = useRef<MapRef>(null);
   const { resolvedTheme } = useTheme();
@@ -119,41 +134,31 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
   const mapConfig = getMapConfig();
   const theme = getThemeConfig();
 
-  const [tileStyle, setTileStyle] = useState(defaultTileStyle);
-  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
+  const tileStyle = propTileStyle || defaultTileStyle;
   const [isClient, setIsClient] = useState(false);
 
-  // View state for map
+  // View state for map - use prop zoom if provided
   const [viewState, setViewState] = useState({
     longitude: mapConfig.defaultCenter[1],
     latitude: mapConfig.defaultCenter[0],
-    zoom: mapConfig.defaultZoom,
+    zoom: propMapZoom || mapConfig.defaultZoom,
     pitch: 0,
     bearing: 0,
     transitionDuration: 1000,
   });
 
+  // Sync viewState zoom with prop zoom
+  useEffect(() => {
+    if (propMapZoom !== undefined && propMapZoom !== viewState.zoom) {
+      setViewState(prev => ({ ...prev, zoom: propMapZoom }));
+    }
+  }, [propMapZoom]);
+
   // Track mounted state
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // Load tileStyle from localStorage on client mount
-  useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem(`atlasp2p-${viewMode}-tile-style`);
-    const isValid = saved && tileStyles.some(style => style.id === saved);
-    if (isValid && saved) {
-      setTileStyle(saved);
-    }
-  }, [tileStyles, viewMode]);
-
-  // Persist tileStyle to localStorage
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem(`atlasp2p-${viewMode}-tile-style`, tileStyle);
-    }
-  }, [tileStyle, isClient, viewMode]);
+  }, []);
 
   // Reset pitch and bearing when switching to globe to prevent tilt
   useEffect(() => {
@@ -637,98 +642,6 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Custom Map Controls - High z-index to stay above bottom sheet, positioned in visible map area */}
-      <div className="absolute right-3 sm:right-4 z-[70] flex flex-col gap-2 top-4 lg:top-auto lg:bottom-16">
-        {/* Map Style Dropdown */}
-        <div className="relative">
-          {/* Dropdown trigger button */}
-          <button
-            onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border hover:bg-card transition-colors"
-            aria-expanded={isStyleDropdownOpen}
-            aria-haspopup="listbox"
-            title="Map Style"
-          >
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium hidden sm:inline">
-              {tileStyles.find(s => s.id === tileStyle)?.name || 'Style'}
-            </span>
-            <ChevronDown className={`h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform ${isStyleDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Dropdown menu */}
-          {isStyleDropdownOpen && (
-            <>
-              {/* Backdrop to close dropdown */}
-              <div
-                className="fixed inset-0 z-[-1]"
-                onClick={() => setIsStyleDropdownOpen(false)}
-              />
-              <div className="absolute bottom-full right-0 mb-2 w-40 sm:w-44 bg-card/95 backdrop-blur-xl rounded-lg shadow-xl border border-border overflow-hidden">
-                <div className="py-1">
-                  {tileStyles.map((style) => {
-                    const IconComponent = style.icon ? THEME_ICONS[style.icon] : null;
-                    const isSelected = tileStyle === style.id;
-                    return (
-                      <button
-                        key={style.id}
-                        type="button"
-                        onClick={() => {
-                          setTileStyle(style.id);
-                          setIsStyleDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
-                          isSelected
-                            ? 'bg-primary/10 text-primary font-medium'
-                            : 'text-foreground hover:bg-muted'
-                        }`}
-                        role="option"
-                        aria-selected={isSelected}
-                      >
-                        {IconComponent && <IconComponent className="h-4 w-4" />}
-                        <span className="flex-1">{style.name}</span>
-                        {isSelected && (
-                          <span className="text-primary">✓</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Zoom Controls */}
-        <div className="flex flex-col bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border overflow-hidden">
-          <button
-            onClick={() => {
-              if (viewState.zoom < mapConfig.maxZoom) {
-                setViewState(prev => ({ ...prev, zoom: Math.min(prev.zoom + 1, mapConfig.maxZoom), transitionDuration: 300 }));
-              }
-            }}
-            disabled={viewState.zoom >= mapConfig.maxZoom}
-            className="p-2 sm:p-2.5 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            aria-label="Zoom in"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-          <div className="h-px bg-border" />
-          <button
-            onClick={() => {
-              if (viewState.zoom > mapConfig.minZoom) {
-                setViewState(prev => ({ ...prev, zoom: Math.max(prev.zoom - 1, mapConfig.minZoom), transitionDuration: 300 }));
-              }
-            }}
-            disabled={viewState.zoom <= mapConfig.minZoom}
-            className="p-2 sm:p-2.5 hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            aria-label="Zoom out"
-          >
-            <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-        </div>
-      </div>
-
       <Map
         ref={mapRef}
         {...viewState}
@@ -740,6 +653,10 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
             setMetaClusterState(null);
           }
           setViewState({ ...evt.viewState, transitionDuration: 1000 });
+          // Notify parent of zoom change
+          if (onZoomChange && evt.viewState.zoom !== viewState.zoom) {
+            onZoomChange(evt.viewState.zoom);
+          }
         }}
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}

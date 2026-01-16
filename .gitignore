@@ -42,6 +42,7 @@ playwright-screenshots/
 .playwright-artifacts-*
 .last-run.json
 .nyc_output/
+.playwright-mcp
 
 # Turbo
 .turbo
