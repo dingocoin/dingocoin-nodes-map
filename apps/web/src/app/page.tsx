@@ -248,7 +248,7 @@ export default function HomePage() {
               <div className="absolute bottom-full right-0 mb-2 w-56 bg-card/95 backdrop-blur-xl rounded-xl shadow-2xl border border-border overflow-hidden z-[70]">
                 <div className="p-2 space-y-1">
                   {tileStyles.map((style) => {
-                    const StyleIcon = iconNameToComponent(style.icon);
+                    const StyleIcon = style.icon ? iconNameToComponent(style.icon) : Layers;
                     const isActive = tileStyle === style.id;
                     return (
                       <button

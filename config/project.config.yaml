@@ -513,8 +513,8 @@ deployment:
 
   # Secrets management
   secrets:
-    # Source: manual (.env file on server)
-    source: manual
+    # Source: auto (will detect available secrets), aws-ssm, github-secrets, or manual
+    source: aws-ssm
     # AWS SSM Parameter Store path
     ssmPath: /Dingocoin/NodesMap/Production
 
