@@ -291,7 +291,7 @@ function ResetPasswordContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                   required
-                  disabled={success || mode === 'validating'}
+                  disabled={success}
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 hover:border-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -311,7 +311,7 @@ function ResetPasswordContent() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter your password"
                   required
-                  disabled={success || mode === 'validating'}
+                  disabled={success}
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 hover:border-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -329,7 +329,7 @@ function ResetPasswordContent() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || success || mode === 'validating'}
+              disabled={loading || success}
               className="w-full py-3 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
               style={{ backgroundColor: theme.primaryColor }}
             >
