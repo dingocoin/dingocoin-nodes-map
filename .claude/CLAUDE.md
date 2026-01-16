@@ -23,9 +23,23 @@ make prod-docker-no-caddy  # Deploy without Caddy
 
 ## Rules
 
+### Repository Structure (CRITICAL)
+- **AtlasP2P** = UPSTREAM open-source template repository
+  - Push code changes HERE (origin: RaxTzu/AtlasP2P)
+  - Only commit generic/reusable code
+  - **NEVER commit deploy.yml** (only deploy.yml.example)
+  - **NEVER commit project.config.yaml** (only .example)
+
+- **Dingocoin-Nodes-Map** = FORK with deployment config
+  - Has deploy.yml with AWS SSM secrets
+  - Has customized project.config.yaml
+  - Pulls from AtlasP2P using `make sync-upstream`
+  - Push to dingocoin-fork remote (RavianXReaver/Dingocoin-Nodes-Map)
+
 ### Git
 - **No Co-Authored-By tags** in commits (no AI attribution)
 - Don't commit unless asked
+- **Default push target: origin (AtlasP2P)**, NOT dingocoin-fork
 
 ### Code
 - Use `make docker-dev` instead of raw `docker compose up` for project commands
