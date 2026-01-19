@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyNodeConfirmSchema } from '@/lib/validations'
 import { rateLimit, RATE_LIMITS } from '@/lib/security'
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const { challenge, processCheck, portCheck, systemInfo } = validation.data;
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Find the verification by challenge
     const { data: verification, error: verificationError } = await supabase
