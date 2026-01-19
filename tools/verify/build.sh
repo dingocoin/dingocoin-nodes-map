@@ -1,17 +1,29 @@
 #!/bin/bash
 set -e
 
-# Build script for cross-platform compilation of the verification server
+# Build script for cross-platform compilation of the verification binary
 # Outputs binaries to apps/web/public/verify/ for distribution
 
-VERSION="1.0.0"
+VERSION="2.0.0"
 OUTPUT_DIR="../../apps/web/public/verify"
 BINARY_NAME="verify"
 
+# Configuration from environment variables (with defaults for local builds)
+API_URL="${API_URL:-https://nodes-dingocoin.raxtzu.com}"
+DAEMON_NAMES="${DAEMON_NAMES:-dingocoind,dingocoin-qt}"
+DEFAULT_PORT="${DEFAULT_PORT:-33117}"
+CHAIN_NAME="${CHAIN_NAME:-Dingocoin}"
+
 echo "╔════════════════════════════════════════════╗"
-echo "║   Building AtlasP2P Verification Server    ║"
+echo "║   Building AtlasP2P Verification Binary    ║"
 echo "║   Version: $VERSION                         ║"
 echo "╚════════════════════════════════════════════╝"
+echo ""
+echo "Configuration:"
+echo "  API URL:      $API_URL"
+echo "  Daemon Names: $DAEMON_NAMES"
+echo "  Default Port: $DEFAULT_PORT"
+echo "  Chain Name:   $CHAIN_NAME"
 echo ""
 
 # Create output directory
@@ -28,8 +40,14 @@ build_platform() {
 
     FILENAME="${BINARY_NAME}-${GOOS}-${GOARCH}${EXT}"
 
+    # Build with injected configuration via ldflags
     env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
-        -ldflags="-s -w -X main.Version=$VERSION" \
+        -ldflags="-s -w \
+            -X main.Version=$VERSION \
+            -X main.ApiUrl=$API_URL \
+            -X main.DaemonNames=$DAEMON_NAMES \
+            -X main.DefaultPort=$DEFAULT_PORT \
+            -X main.ChainName=$CHAIN_NAME" \
         -trimpath \
         -o "$OUTPUT_DIR/$FILENAME" \
         .

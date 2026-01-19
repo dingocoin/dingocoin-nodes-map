@@ -14,6 +14,7 @@ This project is **production-ready** with the following infrastructure:
 1. **CI/CD Workflows** (`.github/workflows/`)
    - ✅ Automated testing on PRs (lint, typecheck, build)
    - ✅ Docker image builds for web app and crawler
+   - ✅ Verification binary builds (cross-platform, config-injected)
    - ✅ Deployment to production via SSH
    - ✅ Health check after deployment
 
@@ -199,7 +200,8 @@ For automated deployments with CI/CD, see Option 1 above.
 
 5. **Web App** (`atlasp2p-web`)
    - Next.js 16 with App Router
-   - API routes for verification, profiles, tipping
+   - API routes for verification (two-step POST-based), profiles, tipping
+   - Serves verification binaries at `/verify/` (cross-platform, auto-built)
    - Port: 4000 (development), 443 with Caddy (production)
    - Dockerfile: `Dockerfile.web`
 

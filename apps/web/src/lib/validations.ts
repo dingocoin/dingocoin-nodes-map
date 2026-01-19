@@ -44,6 +44,36 @@ export const verifyCompleteSchema = z.object({
 
 export type VerifyComplete = z.infer<typeof verifyCompleteSchema>;
 
+// Verify Node Init API (two-step POST-based verification)
+export const verifyNodeInitSchema = z.object({
+  challenge: z.string().min(20).max(128).regex(/^[a-zA-Z0-9]+$/, 'Challenge must contain only alphanumeric characters'),
+  hostname: z.string().optional(),
+});
+
+export type VerifyNodeInit = z.infer<typeof verifyNodeInitSchema>;
+
+// Verify Node Confirm API (two-step POST-based verification)
+export const verifyNodeConfirmSchema = z.object({
+  challenge: z.string().min(20).max(128).regex(/^[a-zA-Z0-9]+$/, 'Challenge must contain only alphanumeric characters'),
+  processCheck: z.object({
+    found: z.boolean(),
+    method: z.enum(['ps', 'pidof', 'pgrep']),
+    daemonName: z.string().optional(),
+  }),
+  portCheck: z.object({
+    listening: z.boolean(),
+    port: z.number().int().positive(),
+    method: z.enum(['netstat', 'ss', 'lsof']),
+  }),
+  systemInfo: z.object({
+    hostname: z.string().optional(),
+    platform: z.string().optional(),
+    arch: z.string().optional(),
+  }).optional(),
+});
+
+export type VerifyNodeConfirm = z.infer<typeof verifyNodeConfirmSchema>;
+
 /**
  * Helper function to validate and parse query parameters
  */

@@ -942,11 +942,14 @@ export function VerificationModal({
                         1
                       </div>
                       <h3 className="font-semibold text-lg">Download Verification Binary</h3>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        NAT/CGNAT Friendly
+                      </span>
                     </div>
 
                     <div className="ml-11 space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        Download the verification server for your operating system:
+                        Download the verification binary for your operating system:
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1023,18 +1026,18 @@ export function VerificationModal({
                     </div>
                   </div>
 
-                  {/* Step 2: Run the Verification Server */}
+                  {/* Step 2: Run the Verification Binary */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
                         2
                       </div>
-                      <h3 className="font-semibold text-lg">Run the Verification Server</h3>
+                      <h3 className="font-semibold text-lg">Run the Verification Binary</h3>
                     </div>
 
                     <div className="ml-11 space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        Make the binary executable and run it with your challenge token:
+                        SSH into your node server and run the binary with your challenge token:
                       </p>
 
                       <div className="space-y-3">
@@ -1063,7 +1066,7 @@ export function VerificationModal({
 
                         {/* Windows Instructions */}
                         <div>
-                          <p className="text-xs text-muted-foreground mb-2">Windows:</p>
+                          <p className="text-xs text-muted-foreground mb-2">Windows (PowerShell or CMD):</p>
                           <div className="relative">
                             <div className="p-4 bg-zinc-900 dark:bg-zinc-950 rounded-xl border border-zinc-700 overflow-x-auto">
                               <code className="text-sm text-green-400 font-mono whitespace-pre-wrap break-all">
@@ -1086,10 +1089,10 @@ export function VerificationModal({
                               What this does:
                             </p>
                             <ul className="text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                              <li>Creates a temporary file at <code className="text-xs bg-blue-100 dark:bg-blue-900 px-1 rounded">.well-known/node-verify/{verification.challenge?.substring(0, 8)}...</code></li>
-                              <li>Starts HTTP server on port 8080 at <code className="text-xs bg-blue-100 dark:bg-blue-900 px-1 rounded">{nodeIp}:8080</code></li>
-                              <li>Waits for our verification system to check the file</li>
-                              <li>Automatically cleans up when you press Ctrl+C</li>
+                              <li>Checks if your {projectConfig.chainConfig.name} daemon is running ({projectConfig.chainConfig.name.toLowerCase()}d or {projectConfig.chainConfig.name.toLowerCase()}-qt)</li>
+                              <li>Verifies port {projectConfig.chainConfig.p2pPort} is listening</li>
+                              <li>Submits verification from your node&apos;s IP address</li>
+                              <li><strong>No port forwarding needed!</strong> Works behind NAT/CGNAT</li>
                             </ul>
                           </div>
                         </div>
@@ -1097,7 +1100,7 @@ export function VerificationModal({
 
                       <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span>Keep the server running until verification completes. Click "Verify Now" below once the server is running.</span>
+                        <span><strong>Important:</strong> Run this command on your node server (the machine running {projectConfig.chainConfig.name.toLowerCase()}d), not your local computer. The binary will automatically submit the verification and you&apos;ll see the result in the terminal.</span>
                       </p>
                     </div>
                   </div>

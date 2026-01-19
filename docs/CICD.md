@@ -520,13 +520,27 @@ Workflow automatically:
 - Extracts `NEXT_PUBLIC_*` vars for Docker build args
 - Creates `.env.production` artifact
 
-**4. build**
+**4. build-verify-binaries**
+- Extracts configuration from `project.config.yaml`:
+  - Chain name (e.g., "Dingocoin")
+  - P2P port (e.g., 33117)
+  - Site URL for API calls
+  - Derives daemon names (e.g., "dingocoind,dingocoin-qt")
+- Builds verification binaries for all platforms:
+  - Linux (x86_64, ARM64)
+  - macOS (Intel, Apple Silicon)
+  - Windows (x64)
+- Injects configuration via Go ldflags at build time
+- Generates SHA256 checksums for each binary
+- Uploads binaries as artifact (deployed with web app)
+
+**5. build-and-push**
 - Builds web image (with `NEXT_PUBLIC` vars baked in)
 - Builds crawler image
-- Pushes to GitHub Container Registry (GHCR)
+- Pushes to GitHub Container Registry (GHCR) or AWS ECR
 - Uses layer caching for speed
 
-**5. deploy**
+**6. deploy**
 - SSH to server
 - Copies docker-compose files + Makefile
 - Copies `.env` file (if not manual)
@@ -567,6 +581,89 @@ elif GitHub secrets populated (check for DOMAIN):
 else:
   → Use "manual" (expect .env on server)
 ```
+
+---
+
+## 🔨 Verification Binary Build
+
+The CI/CD pipeline automatically builds cross-platform verification binaries for the two-step POST-based node verification system.
+
+### Configuration Extraction
+
+The build process extracts configuration from `project.config.yaml`:
+
+```yaml
+chainConfig:
+  name: "Dingocoin"
+  p2pPort: 33117
+
+content:
+  siteUrl: "https://nodes-dingocoin.raxtzu.com"
+```
+
+**Derived values:**
+- `CHAIN_NAME`: "Dingocoin"
+- `DAEMON_NAMES`: "dingocoind,dingocoin-qt" (auto-derived from chain name)
+- `DEFAULT_PORT`: "33117"
+- `API_URL`: "https://nodes-dingocoin.raxtzu.com"
+
+### Build Process
+
+```bash
+# 1. Extract config with yq
+CHAIN_NAME=$(yq '.chainConfig.name' config/project.config.yaml)
+P2P_PORT=$(yq '.chainConfig.p2pPort' config/project.config.yaml)
+SITE_URL=$(yq '.content.siteUrl' config/project.config.yaml)
+
+# 2. Derive daemon names
+DAEMON_BASE=$(echo "$CHAIN_NAME" | tr '[:upper:]' '[:lower:]')
+DAEMON_NAMES="${DAEMON_BASE}d,${DAEMON_BASE}-qt"
+
+# 3. Build with ldflags injection
+go build -ldflags="-s -w \
+  -X main.Version=2.0.0 \
+  -X main.ApiUrl=$SITE_URL \
+  -X main.DaemonNames=$DAEMON_NAMES \
+  -X main.DefaultPort=$P2P_PORT \
+  -X main.ChainName=$CHAIN_NAME" \
+  -trimpath -o verify-linux-amd64 .
+```
+
+### Platform Support
+
+Binaries are built for:
+- **Linux**: x86_64, ARM64
+- **macOS**: Intel (x86_64), Apple Silicon (ARM64)
+- **Windows**: x64
+
+Each binary includes SHA256 checksum for verification.
+
+### Deployment
+
+Binaries are:
+1. Uploaded as GitHub Actions artifact
+2. Downloaded during deployment
+3. Copied to `apps/web/public/verify/` on the server
+4. Served directly from the web app at `/verify/verify-{platform}-{arch}`
+
+### Local Build
+
+To build binaries locally:
+
+```bash
+cd tools/verify
+
+# Set configuration
+export API_URL="https://your-domain.com"
+export DAEMON_NAMES="yourchaind,yourchain-qt"
+export DEFAULT_PORT="8333"
+export CHAIN_NAME="YourChain"
+
+# Build
+./build.sh
+```
+
+Binaries will be output to `apps/web/public/verify/`.
 
 ---
 

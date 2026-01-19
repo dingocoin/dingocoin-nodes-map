@@ -157,30 +157,133 @@ All tables have RLS enabled with policies:
    - Backend verifies signature using bitcoinjs-message
    - Most secure and cryptographically sound
 
-2. **User Agent** (Automated)
+2. **HTTP File Challenge** (NAT/CGNAT-Friendly) ⭐ NEW
+   - **Two-step POST-based verification**
+   - User downloads chain-specific binary (auto-built in CI/CD)
+   - Binary runs on node server, checks:
+     - Daemon process running (e.g., dingocoind, dingocoin-qt)
+     - P2P port listening (e.g., 33117)
+     - Request IP matches node IP in database
+   - **No port forwarding required** - works behind NAT/CGNAT
+   - Multi-layer security: process check + port check + IP validation
+   - Binary config injected at build time via ldflags
+   - See detailed flow below
+
+3. **User Agent** (Automated)
    - Operator sets custom user agent in node config
    - Crawler detects and matches during scans
    - Convenient for technical users
 
-3. **Port Challenge**
+4. **Port Challenge**
    - Temporarily bind to specific port as proof
    - Crawler validates port response
    - For users who can't access wallet keys
 
-4. **DNS TXT Record** (Domain-based)
+5. **DNS TXT Record** (Domain-based)
    - Add TXT record to domain pointing to node IP
    - Validates domain ownership + node control
    - For nodes with associated domains
 
 **API Endpoints**:
 - `POST /api/verify` - Initiate verification, returns challenge
-- `POST /api/verify/:id/complete` - Submit proof
-- `GET /api/verify/:id` - Check status
+- `POST /api/verify-node/init` - Initialize two-step verification (step 1)
+- `POST /api/verify-node/confirm` - Confirm verification with checks (step 2)
+- `PUT /api/verify` - Complete single-step verification methods
+- `GET /api/verify` - Check pending verification status
 
 **Frontend Flow**:
 - VerificationModal component with method selector
 - Real-time status updates via Supabase subscription
 - Success notification + verified badge appears on map
+
+**Two-Step POST Verification Flow** (HTTP File Challenge):
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 1: User Initiates on Website                                  │
+│─────────────────────────────────────────────────────────────────────│
+│ 1. User clicks "Verify Ownership" on node detail page             │
+│ 2. Selects "HTTP File Challenge" method                           │
+│ 3. Website creates verification record with:                       │
+│    - Random challenge token (32 chars)                             │
+│    - Status: pending                                               │
+│    - 24-hour expiry                                                │
+│ 4. User downloads verification binary for their OS                │
+└─────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 2: Binary Initialization (on node server)                     │
+│─────────────────────────────────────────────────────────────────────│
+│ 1. User SSHs to node server                                       │
+│ 2. Runs: ./verify {challenge}                                     │
+│ 3. Binary POSTs to /api/verify-node/init with challenge           │
+│ 4. API validates:                                                  │
+│    ✓ Challenge exists in database                                 │
+│    ✓ Status is pending                                            │
+│    ✓ Not expired                                                  │
+│ 5. API stores request IP in verification.ip_address               │
+│ 6. API returns node's IP and port from crawler DB                 │
+└─────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 3: Binary Checks (on node server)                             │
+│─────────────────────────────────────────────────────────────────────│
+│ 1. Binary checks local daemon process:                            │
+│    - Tries: ps aux | grep {daemon}                                │
+│    - Fallback: pidof {daemon} (Linux)                             │
+│    - Fallback: pgrep -x {daemon} (Unix-like)                      │
+│    - Checks all daemon variants (d and qt)                        │
+│                                                                     │
+│ 2. Binary checks port listening:                                  │
+│    - Tries: netstat -an | grep {port}                             │
+│    - Fallback: ss -lntp | grep {port} (modern Linux)              │
+│    - Fallback: lsof -i :{port} (macOS/BSD)                        │
+└─────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 4: Binary Confirmation (on node server)                       │
+│─────────────────────────────────────────────────────────────────────│
+│ 1. Binary POSTs to /api/verify-node/confirm with:                 │
+│    - Challenge token                                               │
+│    - Process check result (found/not found, method, daemon name)  │
+│    - Port check result (listening/not listening, port, method)    │
+│    - System info (hostname, platform, arch)                       │
+│                                                                     │
+│ 2. API Security Validations:                                       │
+│    ✓ Request IP matches init IP (prevents IP spoofing)            │
+│    ✓ Request IP matches node IP in crawler DB (proves ownership)  │
+│    ✓ Process check passed (daemon running)                        │
+│    ✓ Port check passed (port listening)                           │
+│                                                                     │
+│ 3. If all checks pass:                                             │
+│    - Update status to pending_approval                            │
+│    - Store metadata (process/port check results)                  │
+│    - Add to moderation queue                                      │
+│    - Binary shows success message                                 │
+│                                                                     │
+│ 4. If any check fails:                                             │
+│    - Update status to failed                                       │
+│    - Binary shows detailed error message                          │
+└─────────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 5: Admin Review                                               │
+│─────────────────────────────────────────────────────────────────────│
+│ 1. Admin reviews in moderation queue                              │
+│ 2. Sees all check results and system info                         │
+│ 3. Approves or rejects                                             │
+│ 4. Node gets verified badge on map                                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Security Layers**:
+1. **Rate Limiting**: 10 requests/hour per endpoint per IP
+2. **Challenge Validation**: Must exist, not expired, correct format
+3. **IP Validation Layer 1**: Confirm IP matches init IP (prevents IP spoofing between steps)
+4. **IP Validation Layer 2**: Confirm IP matches node IP in crawler DB (proves node ownership)
+5. **Process Validation**: Daemon must be running locally
+6. **Port Validation**: Port must be listening locally
+7. **Admin Review**: Manual approval for all verifications
 
 ### 2. Node Profiles & Customization
 

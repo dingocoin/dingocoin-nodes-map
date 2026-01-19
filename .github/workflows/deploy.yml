@@ -243,13 +243,85 @@ jobs:
           retention-days: 1
 
   # ===========================================
-  # JOB 4: BUILD AND PUSH IMAGES
+  # JOB 4: BUILD VERIFICATION BINARIES
+  # ===========================================
+  build-verify-binaries:
+    name: Build Verification Binaries
+    runs-on: ubuntu-latest
+    needs: detect-config
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Extract configuration from project.config.yaml
+        id: config
+        run: |
+          CONFIG_FILE="config/project.config.yaml"
+
+          # Use .example as fallback
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "Config file not found, using example"
+            CONFIG_FILE="config/project.config.yaml.example"
+          fi
+
+          # Extract chain configuration
+          CHAIN_NAME=$(yq '.chainConfig.name' $CONFIG_FILE)
+          P2P_PORT=$(yq '.chainConfig.p2pPort' $CONFIG_FILE)
+          SITE_URL=$(yq '.content.siteUrl' $CONFIG_FILE)
+
+          # Derive daemon names from chain name
+          # Example: "Dingocoin" -> "dingocoind,dingocoin-qt"
+          DAEMON_BASE=$(echo "$CHAIN_NAME" | tr '[:upper:]' '[:lower:]')
+          DAEMON_NAMES="${DAEMON_BASE}d,${DAEMON_BASE}-qt"
+
+          echo "api_url=$SITE_URL" >> $GITHUB_OUTPUT
+          echo "daemon_names=$DAEMON_NAMES" >> $GITHUB_OUTPUT
+          echo "default_port=$P2P_PORT" >> $GITHUB_OUTPUT
+          echo "chain_name=$CHAIN_NAME" >> $GITHUB_OUTPUT
+
+          echo "Verification binary configuration:"
+          echo "  Chain Name: $CHAIN_NAME"
+          echo "  API URL: $SITE_URL"
+          echo "  Daemon Names: $DAEMON_NAMES"
+          echo "  Default Port: $P2P_PORT"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build verification binaries
+        working-directory: tools/verify
+        env:
+          API_URL: ${{ steps.config.outputs.api_url }}
+          DAEMON_NAMES: ${{ steps.config.outputs.daemon_names }}
+          DEFAULT_PORT: ${{ steps.config.outputs.default_port }}
+          CHAIN_NAME: ${{ steps.config.outputs.chain_name }}
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload binaries as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-binaries
+          path: apps/web/public/verify/
+          retention-days: 30
+
+  # ===========================================
+  # JOB 5: BUILD AND PUSH IMAGES
   # ===========================================
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    needs: [detect-config, prepare-env-ssm, prepare-env-github]
-    if: always() && needs.detect-config.result == 'success'
+    needs: [detect-config, prepare-env-ssm, prepare-env-github, build-verify-binaries]
+    if: always() && needs.detect-config.result == 'success' && needs.build-verify-binaries.result == 'success'
     permissions:
       contents: read
       packages: write
@@ -258,6 +330,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Download verification binaries BEFORE building Docker image
+      - name: Download verification binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: verify-binaries
+          path: apps/web/public/verify/
+
+      - name: Verify binaries were downloaded
+        run: |
+          echo "Verification binaries:"
+          ls -lh apps/web/public/verify/
+          if [ ! -f "apps/web/public/verify/verify-linux-amd64" ]; then
+            echo "ERROR: Verification binaries not found!"
+            exit 1
+          fi
+          echo "✓ Verification binaries ready for Docker build"
 
       # Download env artifact from prepare-env jobs (if exists)
       - name: Download deployment.env artifact
@@ -518,7 +607,7 @@ jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: [detect-config, prepare-env-ssm, prepare-env-github, build-and-push, backup]
+    needs: [detect-config, prepare-env-ssm, prepare-env-github, build-verify-binaries, build-and-push, backup]
     if: |
       always() &&
       github.ref == 'refs/heads/master' &&
@@ -554,6 +643,9 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/.env
           echo "Copied deployment.env to server"
+
+      # Note: Verification binaries are already baked into the Docker image
+      # (downloaded from artifact in build-and-push job, included in Docker build)
 
       - name: Deploy Caddyfile to host
         if: needs.detect-config.outputs.caddy_mode == 'host'
