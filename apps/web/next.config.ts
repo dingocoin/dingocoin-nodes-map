@@ -6,10 +6,12 @@ const nextConfig: NextConfig = {
   // Output standalone server to bypass Next.js 16 static pre-rendering bug
   output: 'standalone',
 
-  // Include WASM files that Next.js standalone doesn't automatically trace
+  // Include modules that Next.js standalone doesn't automatically trace
   outputFileTracingIncludes: {
     '/api/verify': ['./node_modules/tiny-secp256k1/**/*'],
     '/api/verify/dns-check': ['./node_modules/tiny-secp256k1/**/*'],
+    // pg is used by server-wrapper.js for migrations
+    '/*': ['./node_modules/pg/**/*', './node_modules/pg-pool/**/*', './node_modules/pg-protocol/**/*'],
   },
 
   // Transpile workspace packages and CommonJS dependencies
