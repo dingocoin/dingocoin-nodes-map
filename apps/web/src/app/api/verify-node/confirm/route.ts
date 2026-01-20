@@ -162,18 +162,22 @@ export async function POST(request: NextRequest) {
 
     const node = nodes as { id: string; ip: string; port: number };
 
-    // NOTE: We no longer enforce node IP match because:
-    // 1. Dual-stack networks may use IPv4 for P2P but IPv6 for HTTPS
-    // 2. NAT/VPN can cause IP discrepancies
-    // 3. The init/confirm IP match + process/port checks are sufficient
-    // Security is maintained by: same IP for init/confirm + daemon running + port listening
+    // SECURITY VALIDATION #2: Request IP must match node IP in crawler DB
     if (requestIp !== node.ip) {
-      console.info('[VerifyNode:Confirm] IP differs from node database (allowed for dual-stack)', {
+      console.warn('[VerifyNode:Confirm] IP mismatch with node database', {
         verificationId: verification.id,
         nodeIp: node.ip,
         requestIp,
       });
-      // Continue - don't block, just log
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'IP address does not match the node in our database. Please run this command on your node server.',
+          code: 'IP_MISMATCH_NODE'
+        },
+        { status: 403 }
+      );
     }
 
     // VALIDATION #3: Process check must pass
