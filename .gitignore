@@ -90,3 +90,7 @@ bin/
 # Misc
 *.pem
 .vercel
+
+# Verify binaries (built by CI/CD)
+apps/web/public/verify/*
+!apps/web/public/verify/.gitkeep

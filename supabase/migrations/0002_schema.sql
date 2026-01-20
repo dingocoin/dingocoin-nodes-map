@@ -173,12 +173,16 @@ CREATE TABLE IF NOT EXISTS node_profiles (
     is_avatar_approved BOOLEAN DEFAULT TRUE,
     avatar_rejected_reason TEXT,
     pending_changes JSONB,
+    pending_submitted_at TIMESTAMPTZ,
+    has_pending_changes BOOLEAN GENERATED ALWAYS AS (pending_changes IS NOT NULL) STORED,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_node_profiles_node ON node_profiles(node_id);
 CREATE INDEX IF NOT EXISTS idx_node_profiles_user ON node_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_node_profiles_moderation ON node_profiles(moderation_status) WHERE moderation_status != 'approved';
+CREATE INDEX IF NOT EXISTS idx_node_profiles_pending_submitted ON node_profiles(pending_submitted_at) WHERE pending_submitted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_node_profiles_has_pending ON node_profiles(has_pending_changes) WHERE has_pending_changes = true;
 
 -- Tipping
 CREATE TABLE IF NOT EXISTS node_tip_configs (
