@@ -142,7 +142,9 @@ export async function POST(
 
   // Fallback: Local file storage (development mode)
   try {
-    const publicDir = path.join(process.cwd(), 'public', 'avatars')
+    // In Docker, working directory is /app and public is at apps/web/public
+    // This matches both development (volume mount) and production (standalone build)
+    const publicDir = path.join(process.cwd(), 'apps', 'web', 'public', 'avatars');
 
     // Ensure avatars directory exists
     await mkdir(publicDir, { recursive: true })
