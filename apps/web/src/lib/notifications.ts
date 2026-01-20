@@ -448,11 +448,18 @@ export function formatAlertForDiscord(
 export function formatAlertForEmail(
   data: NodeAlertData,
   userEmail: string,
-  overrides?: { chainConfig?: ChainConfig; themeConfig?: ThemeConfig }
+  overrides?: { chainConfig?: ChainConfig; themeConfig?: ThemeConfig },
+  unsubscribeToken?: string
 ): EmailPayload {
   const chain = overrides?.chainConfig || getChainConfig();
   const theme = overrides?.themeConfig || getThemeConfig();
   const projectName = getProjectConfig().projectName;
+
+  // Build unsubscribe URL if token is provided
+  const baseUrl = chain.websiteUrl || process.env.NEXT_PUBLIC_BASE_URL || '';
+  const unsubscribeUrl = unsubscribeToken
+    ? `${baseUrl}/unsubscribe?token=${unsubscribeToken}`
+    : null;
 
   const emoji = ALERT_EMOJIS[data.alertType];
   const title = ALERT_TITLES[data.alertType];
@@ -701,7 +708,7 @@ export function formatAlertForEmail(
 
       <p style="font-size: 14px; color: #888; margin: 20px 0 0;">
         You received this alert because you have notifications enabled for this node.
-        <a href="${chain.websiteUrl}" style="color: ${theme.primaryColor};">Manage your alerts</a>
+        <a href="${chain.websiteUrl}/settings/alerts" style="color: ${theme.primaryColor};">Manage your alerts</a>
       </p>
     </div>
 
@@ -710,6 +717,11 @@ export function formatAlertForEmail(
       <p style="margin: 0; font-size: 12px; color: #666;">
         ${chain.name} Node Monitor &bull; Powered by ${projectName}
       </p>
+      ${unsubscribeUrl ? `
+      <p style="margin: 10px 0 0; font-size: 11px; color: #555;">
+        <a href="${unsubscribeUrl}" style="color: #666; text-decoration: underline;">Unsubscribe from this alert</a>
+      </p>
+      ` : ''}
     </div>
   </div>
 </body>
@@ -741,6 +753,7 @@ export interface AlertSubscription {
   webhook_type: string;
   cooldown_minutes: number;
   last_alert_at: string | null;
+  unsubscribe_token?: string | null;
 }
 
 export async function sendNodeAlert(
@@ -763,7 +776,12 @@ export async function sendNodeAlert(
 
   // Send email if enabled
   if (subscription.email_enabled && userEmail) {
-    const emailPayload = formatAlertForEmail(data, userEmail, overrides);
+    const emailPayload = formatAlertForEmail(
+      data,
+      userEmail,
+      overrides,
+      subscription.unsubscribe_token || undefined
+    );
     const emailResult = await sendEmail(emailPayload);
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;

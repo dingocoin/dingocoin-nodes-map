@@ -10,6 +10,14 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/security';
 import { isValidDiscordWebhookUrl } from '@/lib/notifications';
+import { randomBytes } from 'crypto';
+
+/**
+ * Generate a secure unsubscribe token
+ */
+function generateUnsubscribeToken(): string {
+  return randomBytes(32).toString('hex');
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -171,7 +179,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Create subscription
+  // Create subscription with unsubscribe token
+  const unsubscribeToken = generateUnsubscribeToken();
+
   const { data: subscription, error } = await supabase
     .from('alert_subscriptions')
     .insert({
@@ -186,6 +196,7 @@ export async function POST(request: NextRequest) {
       webhook_url: webhookUrl || null,
       webhook_type: webhookType,
       cooldown_minutes: cooldownMinutes,
+      unsubscribe_token: unsubscribeToken,
     })
     .select()
     .single();
