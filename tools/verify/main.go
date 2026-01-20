@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -26,14 +28,24 @@ var (
 )
 
 // Shared HTTP client to ensure connection reuse and consistent routing
-// This helps prevent IP mismatch between init and confirm requests
+// Forces IPv4 to match the node's IP in the database (crawlers record IPv4)
+// This prevents dual-stack issues where requests might go via IPv6
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
 	Transport: &http.Transport{
-		MaxIdleConns:        10,
-		IdleConnTimeout:     90 * time.Second,
-		DisableCompression:  true,
-		DisableKeepAlives:   false, // Keep connections alive
+		MaxIdleConns:       10,
+		IdleConnTimeout:    90 * time.Second,
+		DisableCompression: true,
+		DisableKeepAlives:  false, // Keep connections alive
+		// Force IPv4 connections to match node IP recorded by crawler
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			// Force tcp4 (IPv4 only) instead of tcp (which prefers IPv6)
+			return dialer.DialContext(ctx, "tcp4", addr)
+		},
 	},
 }
 
