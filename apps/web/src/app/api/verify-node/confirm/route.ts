@@ -113,9 +113,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract request IP
+    // Extract request IP (prioritize Cloudflare header for real client IP)
     // Strip port if present (e.g., "172.71.24.8:9588" -> "172.71.24.8")
-    let requestIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    let requestIp = request.headers.get('cf-connecting-ip') ||
+                    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
                     request.headers.get('x-real-ip') ||
                     'unknown';
     // Remove port suffix if present
