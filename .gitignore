@@ -20,7 +20,7 @@ deployment.env
 # IDE
 .idea
 .vscode
-.claude
+.claude/*
 *.swp
 *.swo
 
