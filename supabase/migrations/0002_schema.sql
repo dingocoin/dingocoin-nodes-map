@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     rank INTEGER,
     is_verified BOOLEAN DEFAULT FALSE,
     tips_enabled BOOLEAN DEFAULT FALSE,
+    source TEXT DEFAULT 'crawler',
+    registered_by UUID,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(ip, port, chain)
@@ -69,6 +71,8 @@ CREATE INDEX IF NOT EXISTS idx_nodes_location ON nodes(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_nodes_address ON nodes(address);
 CREATE INDEX IF NOT EXISTS idx_nodes_search ON nodes USING gin(address gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_nodes_services ON nodes(services) WHERE services IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_nodes_source ON nodes(source);
+CREATE INDEX IF NOT EXISTS idx_nodes_registered_by ON nodes(registered_by) WHERE registered_by IS NOT NULL;
 
 -- Snapshots
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -120,7 +124,7 @@ CREATE TABLE IF NOT EXISTS verifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     node_id UUID REFERENCES nodes(id) ON DELETE CASCADE,
     user_id UUID,
-    method TEXT NOT NULL CHECK (method IN ('message_sign', 'user_agent', 'port_challenge', 'dns_txt')),
+    method TEXT NOT NULL CHECK (method IN ('message_sign', 'user_agent', 'port_challenge', 'dns_txt', 'http_file')),
     challenge TEXT NOT NULL,
     response TEXT,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'failed', 'expired', 'pending_approval')),
@@ -128,12 +132,15 @@ CREATE TABLE IF NOT EXISTS verifications (
     expires_at TIMESTAMPTZ NOT NULL,
     ip_address INET,
     user_agent TEXT,
+    metadata JSONB DEFAULT '{}',
     attempts INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_verifications_node ON verifications(node_id);
 CREATE INDEX IF NOT EXISTS idx_verifications_user ON verifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_verifications_status ON verifications(status);
+CREATE INDEX IF NOT EXISTS idx_verifications_ip ON verifications(ip_address) WHERE ip_address IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_verifications_metadata ON verifications USING gin(metadata);
 
 CREATE TABLE IF NOT EXISTS verified_nodes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
