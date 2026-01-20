@@ -86,10 +86,18 @@ export async function POST(request: NextRequest) {
 
     // Check if verification is still pending
     if (verification.status !== VerificationStatus.PENDING) {
+      const statusMessages: Record<string, string> = {
+        'pending_approval': 'Verification already submitted and awaiting admin approval.',
+        'verified': 'This node is already verified.',
+        'failed': 'Verification failed. Please start a new verification from the web UI.',
+        'expired': 'Verification expired. Please start a new verification from the web UI.',
+      };
+      const message = statusMessages[verification.status] || `Verification cannot proceed (status: ${verification.status})`;
+
       return NextResponse.json(
         {
           success: false,
-          error: `Verification is not pending (current status: ${verification.status})`,
+          error: message,
           code: 'INVALID_STATUS'
         },
         { status: 400 }

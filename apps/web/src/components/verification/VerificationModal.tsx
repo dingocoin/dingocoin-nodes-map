@@ -452,15 +452,19 @@ export function VerificationModal({
     try {
       // For http_file (binary) method, just check status - binary already submitted
       if (verification.method === 'http_file') {
-        const response = await fetch(`/api/verify?id=${verification.verificationId}`);
+        // GET endpoint uses nodeId param and returns { pending: {...} }
+        const response = await fetch(`/api/verify?nodeId=${nodeId}`);
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(data.error || 'Failed to check status');
         }
 
-        // Check if verification is complete (approved or pending_review)
-        if (data.status === 'approved') {
+        // data.pending contains the verification if it exists
+        const status = data.pending?.status;
+
+        if (status === 'pending_approval') {
+          // Binary submitted, waiting for admin review - show success
           setStep('complete');
           if (onSuccess) {
             setTimeout(() => {
@@ -468,20 +472,14 @@ export function VerificationModal({
               handleClose();
             }, 2000);
           }
-        } else if (data.status === 'pending_review' || data.status === 'submitted') {
-          // Verification submitted by binary, waiting for admin review
-          setStep('complete');
-          if (onSuccess) {
-            setTimeout(() => {
-              onSuccess();
-              handleClose();
-            }, 2000);
-          }
-        } else if (data.status === 'pending') {
+        } else if (status === 'pending') {
           // Binary hasn't submitted yet
           setError('Binary verification not yet received. Run the verify command on your node server.');
+        } else if (!data.pending) {
+          // No pending verification found - might be already approved or expired
+          setError('No pending verification found. It may have been approved or expired.');
         } else {
-          throw new Error(`Verification status: ${data.status}`);
+          throw new Error(`Unexpected verification status: ${status}`);
         }
         return;
       }
