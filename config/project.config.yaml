@@ -437,7 +437,7 @@ features:
   turnstile:
     enabled: true
     # Site key (public key) - safe to commit
-    siteKey: "0x4AAAAAACHmrULrWXGjnBlP"
+    siteKey: "0x4AAAAAACMLVg4vsc438lcM"
     # Turnstile widget mode
     mode: invisible  # visible | invisible | managed
     # Actions that require Turnstile verification
