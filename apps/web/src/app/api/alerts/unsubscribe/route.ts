@@ -65,7 +65,8 @@ async function handleUnsubscribe(token: string): Promise<{ result: UnsubscribeRe
 
   // Check if already unsubscribed
   if (!subscription.email_enabled) {
-    const nodeData = subscription.nodes as { ip: string; port: number } | null;
+    // Supabase returns the relation as a single object (not array) for foreign keys
+    const nodeData = subscription.nodes as unknown as { ip: string; port: number } | null;
     return {
       result: {
         success: true,
@@ -93,7 +94,8 @@ async function handleUnsubscribe(token: string): Promise<{ result: UnsubscribeRe
     };
   }
 
-  const nodeData = subscription.nodes as { ip: string; port: number } | null;
+  // Supabase returns the relation as a single object (not array) for foreign keys
+  const nodeData = subscription.nodes as unknown as { ip: string; port: number } | null;
 
   console.info('[Unsubscribe] Email alerts disabled', {
     subscriptionId: subscription.id,
