@@ -623,10 +623,9 @@ jobs:
     environment: production
 
     steps:
-      # Checkout code first (needed for Caddyfile template)
-      # IMPORTANT: Must be first to avoid wiping downloaded artifacts
+      # Checkout code (for compose files and Caddyfile)
+      # Needed to sync docker-compose files and Caddyfile to server
       - name: Checkout code (for Caddyfile)
-        if: needs.detect-config.outputs.caddy_mode == 'host'
         uses: actions/checkout@v4
 
       - name: Setup SSH
@@ -650,6 +649,16 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/.env
           echo "Copied deployment.env to server"
+
+      # Sync docker-compose files and docker/ directory to server
+      - name: Sync compose files to server
+        run: |
+          echo "Syncing docker-compose files and docker/ directory..."
+          scp -i ~/.ssh/deploy_key docker-compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
+          scp -i ~/.ssh/deploy_key docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
+          scp -i ~/.ssh/deploy_key docker-compose.cloud-prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/ 2>/dev/null || true
+          scp -ri ~/.ssh/deploy_key docker/ ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
+          echo "✓ Synced compose files and docker/ directory"
 
       # Note: Verification binaries are already baked into the Docker image
       # (downloaded from artifact in build-and-push job, included in Docker build)
