@@ -30,8 +30,8 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - DOMAIN=${DOMAIN:-localhost}
-      - ACME_EMAIL=${ACME_EMAIL:-admin@localhost}
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - atlasp2p_caddy-data:/data
@@ -51,18 +51,18 @@ services:
     # IMPORTANT: Override with image, no build in production
     # Setting build: null doesn't work - must omit build entirely
     # and re-declare the service to override base config
-    image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG:-latest}
+    image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG}
     container_name: atlasp2p-web
     env_file:
       - .env
     ports:
-      - "${WEB_PORT:-4000}:3000"  # Exposed when NOT using Caddy
+      - "${WEB_PORT}:3000"  # Exposed when NOT using Caddy
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
       - SUPABASE_INTERNAL_URL=http://kong:8000
       # Use API_EXTERNAL_URL from .env (supports both same-origin and separate subdomain)
-      - NEXT_PUBLIC_SUPABASE_URL=${API_EXTERNAL_URL:-https://${DOMAIN:-localhost}/supabase}
+      - NEXT_PUBLIC_SUPABASE_URL=${API_EXTERNAL_URL}
     volumes:
       - avatar-storage:/app/public/avatars
       - web-next-cache:/app/apps/web/.next/cache
@@ -74,18 +74,18 @@ services:
   # Exposed when NOT using container Caddy (for host-based reverse proxy)
   kong:
     ports:
-      - "${KONG_PORT:-4020}:8000"  # Exposed for external reverse proxy
+      - "${KONG_PORT}:8000"  # Exposed for external reverse proxy
 
   # Override auth for production URLs
   auth:
     environment:
-      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-https://${DOMAIN:-localhost}/supabase}
-      GOTRUE_SITE_URL: ${SITE_URL:-https://${DOMAIN:-localhost}}
-      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-https://${DOMAIN:-localhost}}
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL}
       # Use real SMTP in production
       GOTRUE_MAILER_AUTOCONFIRM: "false"
       GOTRUE_SMTP_HOST: ${SMTP_HOST}
-      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT}
       GOTRUE_SMTP_USER: ${SMTP_USER}
       GOTRUE_SMTP_PASS: ${SMTP_PASS}
 
@@ -96,7 +96,7 @@ services:
     # IMPORTANT: Override with image, no build in production
     # Setting build: null doesn't work - must omit build entirely
     # and re-declare the service to override base config
-    image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG:-latest}
+    image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG}
     container_name: atlasp2p-crawler
     env_file:
       - .env

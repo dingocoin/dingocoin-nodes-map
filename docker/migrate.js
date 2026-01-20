@@ -13,19 +13,48 @@ const path = require('path');
 const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR || '/app/supabase/migrations';
 
 async function main() {
-  const password = process.env.POSTGRES_PASSWORD;
-  if (!password) {
+  const targetPassword = process.env.POSTGRES_PASSWORD;
+  if (!targetPassword) {
     console.log('[Migrate] No POSTGRES_PASSWORD, skipping migrations');
     return; // Clean exit without process.exit
   }
 
-  const pool = new Pool({
-    host: process.env.POSTGRES_HOST || 'db',
-    port: parseInt(process.env.POSTGRES_PORT || '5432'),
-    database: process.env.POSTGRES_DB || 'postgres',
-    user: process.env.POSTGRES_USER || 'postgres',
-    password: password,
-  });
+  const host = process.env.POSTGRES_HOST || 'db';
+  const port = parseInt(process.env.POSTGRES_PORT || '5432');
+  const database = process.env.POSTGRES_DB || 'postgres';
+  const user = process.env.POSTGRES_USER || 'postgres';
+
+  // Try target password first, fall back to default 'postgres' (Supabase image default)
+  let pool;
+  let currentPassword;
+
+  for (const tryPassword of [targetPassword, 'postgres']) {
+    try {
+      const testPool = new Pool({ host, port, database, user, password: tryPassword, max: 1 });
+      await testPool.query('SELECT 1');
+      pool = new Pool({ host, port, database, user, password: tryPassword });
+      currentPassword = tryPassword;
+      if (tryPassword !== targetPassword) {
+        console.log('[Migrate] Connected with default password, will sync to target');
+      }
+      await testPool.end();
+      break;
+    } catch (e) {
+      // Try next password
+    }
+  }
+
+  if (!pool) {
+    throw new Error('Could not connect to database with any known password');
+  }
+
+  // Sync passwords first if using default password
+  if (currentPassword !== targetPassword) {
+    await syncPasswords(pool, targetPassword);
+    // Reconnect with correct password
+    await pool.end();
+    pool = new Pool({ host, port, database, user, password: targetPassword });
+  }
 
   try {
     // Create tracking table

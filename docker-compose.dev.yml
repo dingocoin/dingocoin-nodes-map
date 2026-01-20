@@ -8,30 +8,30 @@
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #   make dev
 #
-# Exposed Ports (configurable via .env):
-#   ${WEB_PORT:-4000} - Web App (Next.js dev server)
-#   ${KONG_PORT:-4020} - Kong API Gateway (Supabase API)
-#   ${DB_PORT:-4021} - PostgreSQL (direct access)
-#   ${STUDIO_PORT:-4022} - Supabase Studio (DB admin UI)
-#   ${INBUCKET_WEB_PORT:-4023} - Inbucket Web (email testing)
-#   ${INBUCKET_SMTP_PORT:-4024} - Inbucket SMTP
+# Exposed Ports (configured in .env):
+#   WEB_PORT - Web App (Next.js dev server)
+#   KONG_PORT - Kong API Gateway (Supabase API)
+#   DB_PORT - PostgreSQL (direct access)
+#   STUDIO_PORT - Supabase Studio (DB admin UI)
+#   INBUCKET_WEB_PORT - Inbucket Web (email testing)
+#   INBUCKET_SMTP_PORT - Inbucket SMTP
 # ============================================
 
 services:
   # Expose database for direct access
   db:
     ports:
-      - "${DB_PORT:-4021}:5432"
+      - "${DB_PORT}:5432"
 
   # Expose Kong for browser Supabase calls
   kong:
     ports:
-      - "${KONG_PORT:-4020}:8000"
+      - "${KONG_PORT}:8000"
 
   # Web app with hot reload
   web:
     ports:
-      - "${WEB_PORT:-4000}:${PORT:-4000}"
+      - "${WEB_PORT}:${PORT}"
     volumes:
       - ./apps/web:/app/apps/web
       - ./packages:/app/packages
@@ -54,14 +54,14 @@ services:
     image: supabase/studio:20241202-71e5240
     container_name: atlasp2p-studio
     ports:
-      - "${STUDIO_PORT:-4022}:3000"
+      - "${STUDIO_PORT}:3000"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      DEFAULT_ORGANIZATION_NAME: ${DEFAULT_ORGANIZATION_NAME:-AtlasP2P}
-      DEFAULT_PROJECT_NAME: ${DEFAULT_PROJECT_NAME:-AtlasP2P}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: ${DEFAULT_ORGANIZATION_NAME}
+      DEFAULT_PROJECT_NAME: ${DEFAULT_PROJECT_NAME}
       SUPABASE_URL: http://kong:8000
-      SUPABASE_PUBLIC_URL: http://localhost:${KONG_PORT:-4020}
+      SUPABASE_PUBLIC_URL: http://localhost:${KONG_PORT}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
@@ -73,8 +73,8 @@ services:
     image: inbucket/inbucket:3.0.3
     container_name: atlasp2p-inbucket
     ports:
-      - "${INBUCKET_WEB_PORT:-4023}:9000"  # Web UI
-      - "${INBUCKET_SMTP_PORT:-4024}:2500"  # SMTP
+      - "${INBUCKET_WEB_PORT}:9000"  # Web UI
+      - "${INBUCKET_SMTP_PORT}:2500"  # SMTP
     restart: unless-stopped
 
   # Crawler with hot reload

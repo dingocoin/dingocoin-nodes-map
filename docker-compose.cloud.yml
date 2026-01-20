@@ -20,14 +20,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
-      target: ${WEB_TARGET:-production}
+      target: ${WEB_TARGET}
     container_name: atlasp2p-web
     ports:
-      - "${PORT:-4000}:${PORT:-4000}"
+      - "${PORT}:${PORT}"
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
+      - NODE_ENV=${NODE_ENV}
       # Cloud mode: internal URL = public URL (no local Kong)
       - SUPABASE_INTERNAL_URL=${NEXT_PUBLIC_SUPABASE_URL}
     volumes:
@@ -37,7 +37,7 @@ services:
       - web-next-cache:/app/apps/web/.next/cache
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${PORT:-4000}/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${PORT}/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
