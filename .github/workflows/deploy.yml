@@ -29,13 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       secrets_source: ${{ steps.detect.outputs.secrets_source }}
-      ssm_param_name: ${{ steps.detect.outputs.ssm_param_name }}
       backup_enabled: ${{ steps.detect.outputs.backup_enabled }}
       rollback_enabled: ${{ steps.detect.outputs.rollback_enabled }}
       health_check_enabled: ${{ steps.detect.outputs.health_check_enabled }}
       deployment_mode: ${{ steps.detect.outputs.deployment_mode }}
-      caddy_enabled: ${{ steps.detect.outputs.caddy_enabled }}
-      caddy_mode: ${{ steps.detect.outputs.caddy_mode }}
 
     steps:
       - name: Checkout
@@ -58,25 +55,16 @@ jobs:
           fi
 
           SECRETS_SOURCE=$(yq '.deployment.secrets.source // "auto"' $CONFIG_FILE)
-          SSM_PARAM_PATH=$(yq '.deployment.secrets.ssmPath // ""' $CONFIG_FILE)
           # NOTE: REGISTRY_TYPE now comes from SSM/deployment.env, not project.config.yaml
           # This ensures SSM is the single source of truth for ALL runtime config
           BACKUP_ENABLED=$(yq '.deployment.backup.enabled // true' $CONFIG_FILE)
           ROLLBACK_ENABLED=$(yq '.deployment.rollback.enabled // true' $CONFIG_FILE)
           HEALTH_CHECK_ENABLED=$(yq '.deployment.healthCheck.enabled // true' $CONFIG_FILE)
           DEPLOYMENT_MODE=$(yq '.deployment.mode // "self-hosted-docker"' $CONFIG_FILE)
-          CADDY_ENABLED=$(yq '.deployment.caddy.enabled // true' $CONFIG_FILE)
-          CADDY_MODE=$(yq '.deployment.caddy.mode // "auto"' $CONFIG_FILE)
-
-          # Determine SSM parameter name (prefer GitHub var, fallback to config)
-          SSM_PARAM_NAME="${{ vars.SSM_PARAM_NAME }}"
-          if [ -z "$SSM_PARAM_NAME" ]; then
-            SSM_PARAM_NAME="$SSM_PARAM_PATH"
-          fi
 
           # Auto-detect secrets source if set to "auto"
           if [ "$SECRETS_SOURCE" = "auto" ]; then
-            if [ -n "$SSM_PARAM_NAME" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
               echo "Auto-detected: AWS SSM Parameter Store"
               SECRETS_SOURCE="aws-ssm"
             elif [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
@@ -89,13 +77,10 @@ jobs:
           fi
 
           echo "secrets_source=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
-          echo "ssm_param_name=$SSM_PARAM_NAME" >> $GITHUB_OUTPUT
           echo "backup_enabled=$BACKUP_ENABLED" >> $GITHUB_OUTPUT
           echo "rollback_enabled=$ROLLBACK_ENABLED" >> $GITHUB_OUTPUT
           echo "health_check_enabled=$HEALTH_CHECK_ENABLED" >> $GITHUB_OUTPUT
           echo "deployment_mode=$DEPLOYMENT_MODE" >> $GITHUB_OUTPUT
-          echo "caddy_enabled=$CADDY_ENABLED" >> $GITHUB_OUTPUT
-          echo "caddy_mode=$CADDY_MODE" >> $GITHUB_OUTPUT
 
           echo "Configuration detected:"
           echo "  Secrets Source: $SECRETS_SOURCE"
@@ -103,92 +88,18 @@ jobs:
           echo "  Rollback Enabled: $ROLLBACK_ENABLED"
           echo "  Health Check Enabled: $HEALTH_CHECK_ENABLED"
           echo "  Deployment Mode: $DEPLOYMENT_MODE"
-          echo "  Caddy Enabled: $CADDY_ENABLED"
-          echo "  Caddy Mode: $CADDY_MODE"
           echo "  NOTE: Registry config comes from SSM/deployment.env (single source of truth)"
 
   # ===========================================
-  # JOB 2: BUILD VERIFICATION BINARIES
-  # ===========================================
-  build-verify-binaries:
-    name: Build Verification Binaries
-    runs-on: ubuntu-latest
-    needs: detect-config
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install yq
-        run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-
-      - name: Extract configuration from project.config.yaml
-        id: config
-        run: |
-          CONFIG_FILE="config/project.config.yaml"
-
-          # Use .example as fallback
-          if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config file not found, using example"
-            CONFIG_FILE="config/project.config.yaml.example"
-          fi
-
-          # Extract chain configuration
-          CHAIN_NAME=$(yq '.chainConfig.name' $CONFIG_FILE)
-          P2P_PORT=$(yq '.chainConfig.p2pPort' $CONFIG_FILE)
-          SITE_URL=$(yq '.content.siteUrl' $CONFIG_FILE)
-
-          # Derive daemon names from chain name
-          # Example: "Dingocoin" -> "dingocoind,dingocoin-qt"
-          DAEMON_BASE=$(echo "$CHAIN_NAME" | tr '[:upper:]' '[:lower:]')
-          DAEMON_NAMES="${DAEMON_BASE}d,${DAEMON_BASE}-qt"
-
-          echo "api_url=$SITE_URL" >> $GITHUB_OUTPUT
-          echo "daemon_names=$DAEMON_NAMES" >> $GITHUB_OUTPUT
-          echo "default_port=$P2P_PORT" >> $GITHUB_OUTPUT
-          echo "chain_name=$CHAIN_NAME" >> $GITHUB_OUTPUT
-
-          echo "Verification binary configuration:"
-          echo "  Chain Name: $CHAIN_NAME"
-          echo "  API URL: $SITE_URL"
-          echo "  Daemon Names: $DAEMON_NAMES"
-          echo "  Default Port: $P2P_PORT"
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      - name: Build verification binaries
-        working-directory: tools/verify
-        env:
-          API_URL: ${{ steps.config.outputs.api_url }}
-          DAEMON_NAMES: ${{ steps.config.outputs.daemon_names }}
-          DEFAULT_PORT: ${{ steps.config.outputs.default_port }}
-          CHAIN_NAME: ${{ steps.config.outputs.chain_name }}
-        run: |
-          chmod +x build.sh
-          ./build.sh
-
-      - name: Upload binaries as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: verify-binaries
-          path: apps/web/public/verify/
-          retention-days: 30
-
-  # ===========================================
-  # JOB 3: BUILD AND PUSH IMAGES
+  # JOB 2: BUILD AND PUSH IMAGES
   # ===========================================
   # SECURITY: Secrets are fetched directly in this job, NOT passed via artifacts
   # This prevents secrets from being exposed in public workflow artifacts
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    needs: [detect-config, build-verify-binaries]
-    if: always() && needs.detect-config.result == 'success' && needs.build-verify-binaries.result == 'success'
+    needs: [detect-config]
+    if: always() && needs.detect-config.result == 'success'
     permissions:
       contents: read
       packages: write
@@ -198,34 +109,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Download verification binaries BEFORE building Docker image
-      - name: Download verification binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: verify-binaries
-          path: apps/web/public/verify/
-
-      - name: Verify binaries were downloaded
-        run: |
-          echo "Verification binaries:"
-          ls -lh apps/web/public/verify/
-          if [ ! -f "apps/web/public/verify/verify-linux-amd64" ]; then
-            echo "ERROR: Verification binaries not found!"
-            exit 1
-          fi
-          echo "Verification binaries ready for Docker build"
-
-      # SECURITY: Fetch secrets directly (no artifacts)
+      # Fetch secrets directly in build job (SECURE - no artifacts)
       - name: Fetch secrets from AWS SSM
         if: needs.detect-config.outputs.secrets_source == 'aws-ssm'
+        id: ssm-secrets
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
         run: |
-          echo "Fetching secrets from SSM: ${{ needs.detect-config.outputs.ssm_param_name }}"
+          echo "Fetching secrets from SSM: ${{ vars.SSM_PARAM_NAME }}"
           aws ssm get-parameter \
-            --name "${{ needs.detect-config.outputs.ssm_param_name }}" \
+            --name "${{ vars.SSM_PARAM_NAME }}" \
             --with-decryption \
             --query 'Parameter.Value' \
             --output text > deployment.env
@@ -240,8 +135,8 @@ jobs:
       - name: Build secrets from GitHub Secrets
         if: needs.detect-config.outputs.secrets_source == 'github-secrets'
         run: |
-          cat > deployment.env << 'ENV_FILE'
-          # Generated from GitHub Secrets
+          cat > deployment.env << 'ENVFILE'
+          # Generated from GitHub Secrets (build job)
           NODE_ENV=production
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -249,19 +144,14 @@ jobs:
           NEXT_PUBLIC_ENABLE_TURNSTILE=${{ secrets.NEXT_PUBLIC_ENABLE_TURNSTILE }}
           NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=${{ secrets.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}
           REGISTRY_TYPE=ghcr
-          ENV_FILE
+          ENVFILE
 
           echo "Created deployment.env from GitHub Secrets"
-
-      - name: Create placeholder for manual mode
-        if: needs.detect-config.outputs.secrets_source == 'manual'
-        run: |
-          echo "# Manual mode - env vars passed via Docker build-args" > deployment.env
 
       - name: Extract build-time environment variables
         id: build-env
         run: |
-          if [ -f deployment.env ] && [ -s deployment.env ]; then
+          if [ -f deployment.env ]; then
             echo "Using deployment.env"
             set -a
             source deployment.env
@@ -275,6 +165,7 @@ jobs:
             NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS="${{ secrets.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}"
           fi
 
+          # Output ONLY non-sensitive build args (NEXT_PUBLIC_* are client-side anyway)
           echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY" >> $GITHUB_OUTPUT
@@ -412,7 +303,7 @@ jobs:
         run: rm -f deployment.env
 
   # ===========================================
-  # JOB 4: BACKUP DATABASE
+  # JOB 3: BACKUP DATABASE
   # ===========================================
   backup:
     name: Backup Database
@@ -457,13 +348,13 @@ jobs:
           BACKUP_SCRIPT
 
   # ===========================================
-  # JOB 5: DEPLOY TO SERVER
+  # JOB 4: DEPLOY TO SERVER
   # ===========================================
-  # SECURITY: Secrets are fetched directly and transferred via SSH pipe, NOT via artifacts
+  # SECURITY: Secrets are fetched directly on server or via SSM, NOT via artifacts
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: [detect-config, build-verify-binaries, build-and-push, backup]
+    needs: [detect-config, build-and-push, backup]
     if: |
       always() &&
       github.ref == 'refs/heads/master' &&
@@ -482,8 +373,8 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ vars.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # SECURITY: Fetch secrets and transfer directly via SSH pipe (no artifacts)
-      - name: Deploy secrets from AWS SSM
+      # SECURITY: Fetch secrets directly and transfer via SSH (no artifacts)
+      - name: Fetch and deploy secrets from AWS SSM
         if: needs.detect-config.outputs.secrets_source == 'aws-ssm'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -492,14 +383,14 @@ jobs:
         run: |
           echo "Fetching secrets from SSM and deploying to server..."
           aws ssm get-parameter \
-            --name "${{ needs.detect-config.outputs.ssm_param_name }}" \
+            --name "${{ vars.SSM_PARAM_NAME }}" \
             --with-decryption \
             --query 'Parameter.Value' \
             --output text | \
           ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} "cat > ${{ vars.DEPLOY_PATH }}/.env"
           echo "Secrets deployed to server via secure pipe"
 
-      - name: Deploy secrets from GitHub Secrets
+      - name: Build and deploy secrets from GitHub Secrets
         if: needs.detect-config.outputs.secrets_source == 'github-secrets'
         run: |
           # Build .env and pipe directly to server (no local file)
@@ -554,90 +445,7 @@ jobs:
           scp -i ~/.ssh/deploy_key docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
           scp -i ~/.ssh/deploy_key docker-compose.cloud-prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/ 2>/dev/null || true
           scp -ri ~/.ssh/deploy_key docker/ ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
-          echo "Synced compose files and docker/ directory"
-
-      # Fetch deployment.env for Caddyfile generation only (needed for SITE_URL)
-      - name: Fetch config for Caddyfile
-        if: needs.detect-config.outputs.caddy_mode == 'host'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-        run: |
-          if [ "${{ needs.detect-config.outputs.secrets_source }}" = "aws-ssm" ]; then
-            aws ssm get-parameter \
-              --name "${{ needs.detect-config.outputs.ssm_param_name }}" \
-              --with-decryption \
-              --query 'Parameter.Value' \
-              --output text > deployment.env
-          else
-            # For GitHub Secrets mode, extract SITE_URL from secrets
-            echo "SITE_URL=${{ secrets.SITE_URL }}" > deployment.env
-          fi
-
-      - name: Deploy Caddyfile to host
-        if: needs.detect-config.outputs.caddy_mode == 'host'
-        run: |
-          # Extract SITE_URL from deployment.env to use as domain
-          DOMAIN=$(grep "^SITE_URL=" deployment.env | cut -d'=' -f2 | sed 's|https://||' | sed 's|http://||')
-          if [ -z "$DOMAIN" ]; then
-            echo "Error: SITE_URL not found in deployment.env"
-            exit 1
-          fi
-
-          # Generate Caddyfile from template
-          cat docker/Caddyfile.host.example | sed "s|nodes.example.com|$DOMAIN|g" > caddyfile-generated
-
-          # Copy to server for comparison
-          scp -i ~/.ssh/deploy_key caddyfile-generated ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:/tmp/caddyfile-new
-
-          # Clean up local files
-          rm -f deployment.env caddyfile-generated
-
-          # Deploy and reload Caddy with diff checking
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'CADDY_SCRIPT'
-            set -e
-            # Determine site config name from project name
-            PROJECT_NAME=$(basename ${{ vars.DEPLOY_PATH }})
-            CADDY_SITE="/etc/caddy/sites/${PROJECT_NAME}.Caddyfile"
-
-            echo "Target Caddyfile: $CADDY_SITE"
-
-            # Check if Caddyfile exists and compare
-            if [ -f "$CADDY_SITE" ] && sudo diff -q "$CADDY_SITE" /tmp/caddyfile-new > /dev/null 2>&1; then
-              echo "Caddyfile unchanged - skipping deployment"
-              rm /tmp/caddyfile-new
-            else
-              if [ -f "$CADDY_SITE" ]; then
-                echo "Caddyfile has changed, deploying update..."
-                sudo cp "$CADDY_SITE" "${CADDY_SITE}.backup-$(date +%Y%m%d-%H%M%S)"
-                echo "Backed up existing Caddyfile"
-              else
-                echo "No existing Caddyfile found, deploying new config..."
-              fi
-
-              sudo mv /tmp/caddyfile-new "$CADDY_SITE"
-              sudo chown root:root "$CADDY_SITE"
-              sudo chmod 644 "$CADDY_SITE"
-              echo "Deployed new Caddyfile"
-
-              if sudo caddy validate --config /etc/caddy/Caddyfile; then
-                echo "Caddyfile validation passed"
-                sudo systemctl reload caddy
-                echo "Caddy reloaded successfully"
-              else
-                echo "Caddyfile validation failed"
-                LATEST_BACKUP=$(ls -t "${CADDY_SITE}.backup-"* 2>/dev/null | head -1)
-                if [ -n "$LATEST_BACKUP" ]; then
-                  sudo cp "$LATEST_BACKUP" "$CADDY_SITE"
-                  echo "Restored backup: $LATEST_BACKUP"
-                fi
-                exit 1
-              fi
-            fi
-          CADDY_SCRIPT
-
-          echo "Caddyfile deployment complete"
+          echo "Synced compose files"
 
       - name: Deploy application
         run: |
@@ -649,9 +457,7 @@ jobs:
 
             echo "Loading environment configuration..."
             if [ -f .env ]; then
-              set -a
               source .env
-              set +a
               echo "Environment loaded successfully"
             else
               echo "Warning: .env not found (manual mode)"
@@ -690,7 +496,7 @@ jobs:
           DEPLOY_SCRIPT
 
   # ===========================================
-  # JOB 6: HEALTH CHECK
+  # JOB 5: HEALTH CHECK
   # ===========================================
   health-check:
     name: Health Check
@@ -741,7 +547,7 @@ jobs:
           HEALTH_SCRIPT
 
   # ===========================================
-  # JOB 7: ROLLBACK ON FAILURE
+  # JOB 6: ROLLBACK ON FAILURE
   # ===========================================
   rollback:
     name: Rollback Deployment
