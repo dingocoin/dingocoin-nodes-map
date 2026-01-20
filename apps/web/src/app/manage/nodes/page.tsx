@@ -81,6 +81,10 @@ export default function MyNodesPage() {
   const [registerSuccess, setRegisterSuccess] = useState<string | null>(null);
   const [detectingIp, setDetectingIp] = useState(false);
 
+  // Delete state
+  const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchMyNodes();
     fetchRegisteredNodes();
@@ -97,6 +101,29 @@ export default function MyNodesPage() {
       console.error('Failed to fetch registered nodes:', err);
     } finally {
       setRegisteredLoading(false);
+    }
+  };
+
+  const handleDeleteNode = async (nodeId: string) => {
+    setDeletingNodeId(nodeId);
+    try {
+      const response = await fetch(`/api/nodes/${nodeId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete node');
+      }
+
+      // Remove from local state
+      setRegisteredNodes(prev => prev.filter(n => n.id !== nodeId));
+      setDeleteConfirmId(null);
+    } catch (err) {
+      console.error('Failed to delete node:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete node');
+    } finally {
+      setDeletingNodeId(null);
     }
   };
 
@@ -451,13 +478,45 @@ export default function MyNodesPage() {
                         {node.last_seen ? new Date(node.last_seen).toLocaleString() : '—'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => router.push(`/node/${node.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-muted transition-colors"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          View
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => router.push(`/node/${node.id}`)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-muted transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View
+                          </button>
+                          {deleteConfirmId === node.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDeleteNode(node.id)}
+                                disabled={deletingNodeId === node.id}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                              >
+                                {deletingNodeId === node.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="inline-flex items-center px-2 py-1.5 text-xs rounded-lg border border-border hover:bg-muted transition-colors"
+                              >
+                                <XCircle className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmId(node.id)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                              title="Delete node"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

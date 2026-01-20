@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { NodeWithProfile } from '@atlasp2p/types'
+import { isAdmin } from '@/lib/admin'
 
 /**
  * Transform database snake_case to TypeScript camelCase
@@ -115,5 +116,91 @@ export async function GET(
   return NextResponse.json({
     node,
     uptimeHistory: uptimeHistory || []
+  })
+}
+
+/**
+ * Delete a manually registered node
+ *
+ * Only allows deletion if:
+ * - User is authenticated
+ * - Node was registered by this user OR user is admin
+ * - Node source is 'manual' (can't delete crawler-discovered nodes)
+ *
+ * @param {NextRequest} request - The request object
+ * @param {Object} params - Route parameters
+ * @param {string} params.id - Node UUID
+ * @returns {Promise<NextResponse>} Success or error response
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  // Check authentication
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Authentication required' },
+      { status: 401 }
+    )
+  }
+
+  // Check if user is admin
+  const userIsAdmin = await isAdmin(user.id)
+
+  // Use admin client to access full node data (including registered_by)
+  const adminClient = createAdminClient()
+
+  // Fetch node to check ownership
+  const { data: node, error: nodeError } = await adminClient
+    .from('nodes')
+    .select('id, registered_by, source')
+    .eq('id', id)
+    .single()
+
+  if (nodeError || !node) {
+    return NextResponse.json(
+      { error: 'Node not found' },
+      { status: 404 }
+    )
+  }
+
+  // Check permissions
+  const isOwner = node.registered_by === user.id
+  if (!isOwner && !userIsAdmin) {
+    return NextResponse.json(
+      { error: 'You can only delete nodes you registered' },
+      { status: 403 }
+    )
+  }
+
+  // Only allow deletion of manually registered nodes (unless admin)
+  if (node.source !== 'manual' && !userIsAdmin) {
+    return NextResponse.json(
+      { error: 'Only manually registered nodes can be deleted' },
+      { status: 403 }
+    )
+  }
+
+  // Delete the node (cascades to related records via FK constraints)
+  const { error: deleteError } = await adminClient
+    .from('nodes')
+    .delete()
+    .eq('id', id)
+
+  if (deleteError) {
+    console.error('[DeleteNode] Failed to delete node:', deleteError)
+    return NextResponse.json(
+      { error: 'Failed to delete node' },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Node deleted successfully'
   })
 }
