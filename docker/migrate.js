@@ -82,7 +82,7 @@ async function main() {
 
     if (files.length === 0) {
       console.log('[Migrate] No pending migrations');
-      await syncPasswords(pool, password);
+      await syncPasswords(pool, targetPassword);
       return; // Clean exit
     }
 
@@ -106,7 +106,7 @@ async function main() {
       }
     }
 
-    await syncPasswords(pool, password);
+    await syncPasswords(pool, targetPassword);
     console.log('[Migrate] Done');
   } finally {
     await pool.end();
