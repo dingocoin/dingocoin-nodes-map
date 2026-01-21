@@ -273,11 +273,11 @@ export function NodeDetailModal({
                     {node.connectionType}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground flex-shrink-0">
                     User Agent
                   </span>
-                  <span className="text-sm font-mono truncate max-w-[180px]" title={node.version || 'N/A'}>
+                  <span className="text-xs sm:text-sm font-mono truncate max-w-[120px] sm:max-w-[180px]" title={node.version || 'N/A'}>
                     {node.version || 'N/A'}
                   </span>
                 </div>
@@ -345,12 +345,12 @@ export function NodeDetailModal({
                     </div>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1 flex-shrink-0">
                     <Layers className="h-3 w-3" />
                     Services
                   </span>
-                  <span className="font-mono text-xs" title={servicesFormatted}>
+                  <span className="font-mono text-[10px] sm:text-xs truncate max-w-[100px] sm:max-w-[160px]" title={servicesFormatted}>
                     {servicesFormatted}
                   </span>
                 </div>
@@ -404,19 +404,19 @@ export function NodeDetailModal({
                   </div>
                 )}
                 {node.isp && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">ISP</span>
-                    <span className="text-sm truncate max-w-[180px]" title={node.isp}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground flex-shrink-0">ISP</span>
+                    <span className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[180px]" title={node.isp}>
                       {node.isp}
                     </span>
                   </div>
                 )}
                 {(node.asn || node.asnOrg) && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Network</span>
-                    <span className="text-sm text-right max-w-[200px] truncate" title={node.asnOrg ? `${node.asnOrg} (AS${node.asn})` : `AS${node.asn}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground flex-shrink-0">Network</span>
+                    <span className="text-xs sm:text-sm text-right max-w-[100px] sm:max-w-[180px] truncate" title={node.asnOrg ? `${node.asnOrg} (AS${node.asn})` : `AS${node.asn}`}>
                       {node.asnOrg ? (
-                        <>{node.asnOrg} <span className="font-mono text-xs text-muted-foreground">(AS{node.asn})</span></>
+                        <><span className="hidden sm:inline">{node.asnOrg} </span><span className="font-mono text-[10px] sm:text-xs text-muted-foreground">(AS{node.asn})</span></>
                       ) : (
                         <span className="font-mono">AS{node.asn}</span>
                       )}

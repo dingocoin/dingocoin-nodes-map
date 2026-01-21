@@ -980,7 +980,7 @@ export default function MapLibreMap({
             closeButton={false}
             closeOnClick={false}
             className="node-hover-popup"
-            maxWidth="320px"
+            maxWidth="none"
           >
             <NodeHoverPreview node={hoveredNode} />
           </Popup>
