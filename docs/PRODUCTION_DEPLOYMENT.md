@@ -293,8 +293,8 @@ See **[SUPABASE_STORAGE_SETUP.md](./SUPABASE_STORAGE_SETUP.md)** for complete gu
 ### Pre-Deployment
 
 - [ ] **Choose deployment mode** (self-hosted vs cloud Supabase)
-- [ ] Review `BEST_PRACTICES_REVIEW.md` for crawler improvements
-- [ ] Review `CRAWLER_IMPROVEMENTS.md` for retry logic and protocol negotiation
+- [ ] Review crawler logs for any connectivity issues
+- [ ] Verify chain configuration in `config/project.config.yaml`
 - [ ] **If using Cloud Supabase:**
   - [ ] Create Supabase project
   - [ ] Run migrations: `supabase db push`

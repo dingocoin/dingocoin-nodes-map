@@ -37,13 +37,13 @@
 | **[FORKING.md](./FORKING.md)** | Fork and customize for your chain | Creating your own node map |
 | **[BRANDING.md](../apps/web/public/logos/BRANDING.md)** | Asset requirements, logo specs | Replacing branding |
 
-### Architecture
+### Architecture & Development
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System design, tech stack | Understanding the codebase |
-| **[API.md](./API.md)** | API endpoints, authentication | Building integrations |
-| **[DATABASE.md](./DATABASE.md)** | Schema, migrations, RLS policies | Database work |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System design, tech stack, API endpoints, database schema | Understanding the codebase |
+| **[DEVELOPER.md](./DEVELOPER.md)** | Development workflow, testing, contributing | Contributing code |
+| **[MODERATION.md](./MODERATION.md)** | Admin moderation system, content workflow | Managing user content |
 
 ## 🚀 Quick Commands
 
@@ -54,7 +54,7 @@ make docker-dev
 
 # Development (Cloud Supabase)
 make setup-cloud
-nano .env.local  # Add credentials
+nano .env  # Add Supabase credentials
 make cloud-dev
 
 # Production (Self-Hosted)
@@ -117,16 +117,20 @@ AtlasP2P provides automated setup scripts for common tasks:
 
 ```
 docs/
-├── README.md                      # This file
+├── README.md                      # This file - documentation index
+├── GETTING_STARTED.md             # Quick start guide
 ├── FORKING.md                     # Customization guide
-├── DEPLOYMENT_SCENARIOS.md        # All scenarios explained
+├── DEPLOYMENT_SCENARIOS.md        # All deployment options
 ├── PRODUCTION_DEPLOYMENT.md       # Production guide
+├── CICD.md                        # CI/CD pipeline setup
+├── SUPABASE_QUICKSTART.md         # Supabase setup guide
 ├── SUPABASE_STORAGE_SETUP.md      # Avatar storage
-├── ARCHITECTURE.md                # System design
-├── API.md                         # API reference
-├── DATABASE.md                    # Database schema
+├── ARCHITECTURE.md                # System design, API, database
+├── DEVELOPER.md                   # Development workflow
+├── MODERATION.md                  # Admin moderation system
+├── TRANSPARENCY.md                # Transparency and audit features
+├── TURNSTILE_SETUP.md             # Bot protection setup
 └── assets/                        # Documentation images
-    └── atlasp2p.jpg               # Logo for GitHub Pages
 ```
 
 ## 🔗 External Resources

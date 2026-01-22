@@ -72,10 +72,10 @@ make cloud-dev
 **New to AtlasP2P?** Read in this order:
 
 1. **This file** (Getting Started) - You are here!
-2. **[QUICKSTART.md](./QUICKSTART.md)** - Detailed setup for all deployment modes
-3. **[FORKING.md](./FORKING.md)** - Customize for your blockchain
-4. **[DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)** - Understand all options
-5. **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** - Go live checklist
+2. **[FORKING.md](./FORKING.md)** - Customize for your blockchain
+3. **[DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)** - Understand all deployment options
+4. **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** - Go live checklist
+5. **[DEVELOPER.md](./DEVELOPER.md)** - Development guidelines and workflow
 
 **Quick reference**: [README.md](./README.md) - Documentation index
 
@@ -347,7 +347,7 @@ docker volume ls | grep avatar
 cat .gitignore | grep avatars
 ```
 
-**Full troubleshooting**: [QUICKSTART.md#-troubleshooting](./QUICKSTART.md#-troubleshooting)
+**Full troubleshooting**: See [DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md#-troubleshooting-by-scenario)
 
 ---
 
@@ -392,7 +392,7 @@ make docker-dev
 ## 🤝 Getting Help
 
 - **Quick issues**: [Troubleshooting section above](#-troubleshooting)
-- **Setup questions**: [QUICKSTART.md](./QUICKSTART.md)
+- **Setup questions**: [DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)
 - **Customization**: [FORKING.md](./FORKING.md)
 - **GitHub Issues**: https://github.com/RaxTzu/AtlasP2P/issues
 - **Documentation**: [README.md](./README.md) - Full index
@@ -422,4 +422,4 @@ make setup-docker && make docker-dev
 
 **Choose your path and get started!** 🚀
 
-For detailed guidance, see [QUICKSTART.md](./QUICKSTART.md)
+For detailed guidance, see [DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)

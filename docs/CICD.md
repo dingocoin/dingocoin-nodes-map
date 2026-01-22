@@ -598,14 +598,14 @@ chainConfig:
   p2pPort: 33117
 
 content:
-  siteUrl: "https://nodes-dingocoin.raxtzu.com"
+  siteUrl: "https://nodes.dingocoin.com"
 ```
 
 **Derived values:**
 - `CHAIN_NAME`: "Dingocoin"
 - `DAEMON_NAMES`: "dingocoind,dingocoin-qt" (auto-derived from chain name)
 - `DEFAULT_PORT`: "33117"
-- `API_URL`: "https://nodes-dingocoin.raxtzu.com"
+- `API_URL`: "https://nodes.dingocoin.com"
 
 ### Build Process
 
