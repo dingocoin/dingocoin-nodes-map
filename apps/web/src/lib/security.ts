@@ -164,9 +164,15 @@ export async function logAdminAction(
   try {
     const adminClient = createAdminClient();
 
-    const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] ||
-               request?.headers.get('x-real-ip') ||
-               null;
+    let ip = request?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+             request?.headers.get('x-real-ip')?.trim() ||
+             null;
+
+    // Strip port if present (e.g., "172.64.215.120:20283" -> "172.64.215.120")
+    if (ip && ip.includes(':') && !ip.includes('[')) {
+      // IPv4 with port - split on last colon
+      ip = ip.split(':')[0];
+    }
 
     const userAgent = request?.headers.get('user-agent') || null;
 
