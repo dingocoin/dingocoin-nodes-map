@@ -378,6 +378,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // CRITICAL: Clear previous_status and previous_tier after alerts are processed
+    // This prevents duplicate alerts for the same transition
+    const nodeIdsToUpdate = [...new Set(changes.map(c => c.node_id))];
+
+    if (nodeIdsToUpdate.length > 0) {
+      // Clear previous_status for nodes that had status change alerts
+      const statusChangeNodeIds = changes
+        .filter(c => c.change_type === 'offline' || c.change_type === 'online')
+        .map(c => c.node_id);
+
+      if (statusChangeNodeIds.length > 0) {
+        await adminClient
+          .from('nodes')
+          .update({ previous_status: null })
+          .in('id', statusChangeNodeIds);
+        console.log('[Alerts] Cleared previous_status for', statusChangeNodeIds.length, 'nodes');
+      }
+
+      // Clear previous_tier for nodes that had tier change alerts
+      const tierChangeNodeIds = changes
+        .filter(c => c.change_type === 'tier_change')
+        .map(c => c.node_id);
+
+      if (tierChangeNodeIds.length > 0) {
+        await adminClient
+          .from('nodes')
+          .update({ previous_tier: null })
+          .in('id', tierChangeNodeIds);
+        console.log('[Alerts] Cleared previous_tier for', tierChangeNodeIds.length, 'nodes');
+      }
+    }
+
     console.log('[Alerts] Sent', sent, 'alerts for', changes.length, 'changes');
 
     return NextResponse.json({
