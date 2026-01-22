@@ -404,6 +404,8 @@ jobs:
           echo "NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST" >> $GITHUB_OUTPUT
 
           echo "Extracted NEXT_PUBLIC_* variables for build"
 
@@ -510,6 +512,8 @@ jobs:
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             NEXT_PUBLIC_ENABLE_TURNSTILE=${{ steps.build-env.outputs.NEXT_PUBLIC_ENABLE_TURNSTILE }}
             NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ steps.build-env.outputs.NEXT_PUBLIC_POSTHOG_KEY }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ steps.build-env.outputs.NEXT_PUBLIC_POSTHOG_HOST }}
 
       - name: Skip web build
         if: needs.detect-changes.outputs.should_build_web != 'true'
