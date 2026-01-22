@@ -1,36 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit, RATE_LIMITS } from '@/lib/security';
 
 /**
  * Email OTP Verification API
  *
  * Verifies a 6-digit OTP code sent to the user's email.
- * Includes rate limiting and expiration checks.
+ * Uses database-backed rate limiting for distributed environments.
  */
 
-// Rate limiting store (in-memory for now, use Redis in production)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const limit = rateLimitMap.get(email);
-
-  if (!limit || now > limit.resetAt) {
-    // Reset or create new limit
-    rateLimitMap.set(email, {
-      count: 1,
-      resetAt: now + 60 * 1000, // 1 minute window
-    });
-    return true;
-  }
-
-  if (limit.count >= 5) {
-    return false; // Rate limit exceeded
-  }
-
-  limit.count++;
-  return true;
-}
+// OTP-specific rate limit: 5 attempts per minute (stricter than default)
+const OTP_RATE_LIMIT = {
+  maxRequests: 5,
+  windowMs: 60 * 1000, // 1 minute
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,8 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting
-    if (!checkRateLimit(email)) {
+    // Database-backed rate limiting (works across multiple server instances)
+    const rateLimitResult = await rateLimit(request, `otp:verify:${email}`, OTP_RATE_LIMIT);
+    if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
           success: false,
@@ -100,9 +84,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Success - clear rate limit for this email
-    rateLimitMap.delete(email);
-
     return NextResponse.json({
       success: true,
       message: 'Email verified successfully',
@@ -118,16 +99,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Clean up old rate limit entries every hour
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [email, limit] of rateLimitMap.entries()) {
-      if (now > limit.resetAt) {
-        rateLimitMap.delete(email);
-      }
-    }
-  }, 60 * 60 * 1000); // 1 hour
 }
