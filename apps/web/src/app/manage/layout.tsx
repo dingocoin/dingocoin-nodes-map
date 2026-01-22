@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Flag,
   Users,
+  User,
   Activity,
   ChevronLeft,
   ChevronRight,
@@ -127,6 +128,13 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
       label: 'Audit Log',
       icon: <Activity className="h-5 w-5" />,
       href: '/manage/audit',
+      adminOnly: true
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings className="h-5 w-5" />,
+      href: '/manage/settings',
       adminOnly: true
     }
   ];
@@ -261,10 +269,10 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors ${
                 collapsed ? 'justify-center' : ''
               }`}
-              title={collapsed ? 'Settings' : undefined}
+              title={collapsed ? 'Account' : undefined}
             >
-              <Settings className="h-5 w-5" />
-              {!collapsed && <span className="font-medium">Settings</span>}
+              <User className="h-5 w-5" />
+              {!collapsed && <span className="font-medium">Account</span>}
             </button>
             <button
               onClick={handleLogout}
