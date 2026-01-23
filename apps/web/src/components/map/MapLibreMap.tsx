@@ -11,9 +11,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import Supercluster from 'supercluster';
 import { Sun, Map as MapIcon, Moon, ChevronDown, Layers, Plus, Minus } from 'lucide-react';
 import { useNodes } from '@/hooks/useNodes';
-import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig } from '@/config';
-import { getTierColor, getTierIcon } from '@/lib/theme-colors';
-import type { NodeWithProfile, TileStyleConfig, NodeTier } from '@atlasp2p/types';
+import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig, getAssetPaths, getChainConfig, isVersionOutdated } from '@/config';
+import { getTierColor, getTierIcon, getVersionStatusColor } from '@/lib/theme-colors';
+import type { NodeWithProfile, TileStyleConfig, NodeTier, VersionStatus } from '@atlasp2p/types';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as LucideIcons from 'lucide-react';
 import ClusterMarker from './ClusterMarker';
@@ -113,6 +113,7 @@ export default function MapLibreMap({
 }: MapLibreMapProps) {
   const { nodes, isLoading, error } = useNodes();
   const mapRef = useRef<MapRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [hoveredNode, setHoveredNode] = useState<NodeWithProfile | null>(null);
@@ -511,18 +512,73 @@ export default function MapLibreMap({
     return positions.sort((a, b) => b.y - a.y);
   }, [getSpiderRadius]);
 
+  // Get config values for marker rendering
+  const assets = useMemo(() => getAssetPaths(), []);
+  const chainConfig = useMemo(() => getChainConfig(), []);
+  const defaultMarkerIcon = assets.markerIconPath || assets.logoPath;
+
+  // Calculate version status for a node
+  const getNodeVersionStatus = useCallback((node: NodeWithProfile): VersionStatus | null => {
+    if (!node.clientVersion) return null;
+    return isVersionOutdated(
+      node.clientVersion,
+      chainConfig.currentVersion,
+      chainConfig.minimumVersion
+    );
+  }, [chainConfig]);
+
   // Render node marker icon
   // Shows custom avatar if available, otherwise default marker
   // Adds tier badge overlay for non-standard tiers
+  // Adds version status ring for outdated/critical versions
+  // Can optionally use version-specific icons from config
   const renderNodeIcon = useCallback((node: NodeWithProfile, zIndex?: number, customSize?: number) => {
     const tierIconName = getTierIcon(node.tier);
     const color = getTierColor(node.tier, node.status);
     const size = customSize || 56; // Use custom size if provided, otherwise default
     const badgeSize = Math.max(18, size * 0.39); // Scale badge proportionally
 
-    // Determine the image source - custom avatar or default marker
-    const imageSrc = node.avatarUrl || '/logos/dingocoin.png';
-    const isCustomAvatar = !!node.avatarUrl;
+    // Get version status for ring indicator and icon selection
+    const versionStatus = getNodeVersionStatus(node);
+    const versionRingColor = getVersionStatusColor(versionStatus);
+
+    // Determine the image source based on version status and config
+    // Logic:
+    // 1. If node has custom avatar AND overrideAvatarWhenOutdated is false → show avatar
+    // 2. If node is offline AND offlinePath configured → show offline icon
+    // 3. If node is outdated/critical AND version-specific path configured → show that icon
+    // 4. Fallback: show default marker
+    const getMarkerImageSrc = (): { src: string; isCustomAvatar: boolean } => {
+      const hasCustomAvatar = !!node.avatarUrl;
+      const shouldOverride = assets.overrideAvatarWhenOutdated === true;
+
+      // If user has custom avatar and we shouldn't override, use their avatar
+      if (hasCustomAvatar && !shouldOverride) {
+        return { src: node.avatarUrl!, isCustomAvatar: true };
+      }
+
+      // Check for offline status first (takes priority)
+      if (node.status === 'down' && assets.markerIconOfflinePath) {
+        return { src: assets.markerIconOfflinePath, isCustomAvatar: false };
+      }
+
+      // Check for version-specific icons
+      if (versionStatus === 'critical' && assets.markerIconCriticalPath) {
+        return { src: assets.markerIconCriticalPath, isCustomAvatar: false };
+      }
+      if (versionStatus === 'outdated' && assets.markerIconOutdatedPath) {
+        return { src: assets.markerIconOutdatedPath, isCustomAvatar: false };
+      }
+
+      // Fallback: use custom avatar if available, otherwise default marker
+      if (hasCustomAvatar) {
+        return { src: node.avatarUrl!, isCustomAvatar: true };
+      }
+
+      return { src: defaultMarkerIcon, isCustomAvatar: false };
+    };
+
+    const { src: imageSrc, isCustomAvatar } = getMarkerImageSrc();
 
     // Get tier badge icon for non-standard tiers
     const IconComponent = node.tier !== 'standard' ? iconNameToComponent(tierIconName) : null;
@@ -546,6 +602,23 @@ export default function MapLibreMap({
           e.currentTarget.style.zIndex = zIndex?.toString() ?? 'auto';
         }}
       >
+        {/* Version status ring (outdated=orange, critical=red) */}
+        {versionRingColor && node.status === 'up' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -3,
+              left: -3,
+              width: size + 6,
+              height: size + 6,
+              borderRadius: '50%',
+              border: `3px solid ${versionRingColor}`,
+              boxShadow: `0 0 8px ${versionRingColor}`,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
         {/* Main marker image - avatar or default */}
         <div
           style={{
@@ -598,7 +671,7 @@ export default function MapLibreMap({
         )}
       </div>
     );
-  }, []);
+  }, [defaultMarkerIcon, getNodeVersionStatus]);
 
   // Get nodes within a cluster
   const getClusterNodes = useCallback((clusterId: number): NodeWithProfile[] => {
@@ -641,7 +714,7 @@ export default function MapLibreMap({
   }, []);
 
   return (
-    <div className="h-full w-full relative">
+    <div ref={containerRef} className="h-full w-full relative">
       <Map
         ref={mapRef}
         {...viewState}
@@ -846,19 +919,68 @@ export default function MapLibreMap({
                 );
               })}
 
-              {/* Spider node tooltip - positioned at the hovered node */}
+              {/* Spider node tooltip - positioned at the hovered node with smart edge detection */}
               {spiderHover && (() => {
                 const nodeCount = spiderfyState.nodes.length;
                 const markerSize = nodeCount <= 15 ? 56 : nodeCount <= 25 ? 48 : 42;
                 const halfSize = markerSize / 2;
 
+                // Calculate smart positioning to avoid tooltip going outside viewport
+                const tooltipWidth = 280; // Max tooltip width from NodeHoverPreview
+                const tooltipHeight = 200; // Approximate tooltip height
+                const edgePadding = 10; // Min distance from edge
+
+                // Get marker's screen position (spiderfy center projected to screen)
+                let markerScreenX = 0;
+                let markerScreenY = 0;
+                if (mapRef.current && spiderfyState) {
+                  const point = mapRef.current.project([
+                    spiderfyState.center.longitude,
+                    spiderfyState.center.latitude
+                  ]);
+                  markerScreenX = point.x;
+                  markerScreenY = point.y;
+                }
+
+                // Calculate tooltip's projected screen position
+                const tooltipScreenX = markerScreenX + spiderHover.x;
+                const tooltipScreenY = markerScreenY + spiderHover.y - halfSize - 10 - tooltipHeight;
+
+                // Get container bounds
+                const containerBounds = containerRef.current?.getBoundingClientRect();
+                const containerWidth = containerBounds?.width ?? 800;
+                const containerHeight = containerBounds?.height ?? 600;
+
+                // Determine if we need to flip or shift
+                let flipVertical = false;
+                let shiftX = 0;
+
+                // Check if tooltip would go above viewport
+                if (tooltipScreenY < edgePadding) {
+                  flipVertical = true; // Position below the node instead
+                }
+
+                // Check horizontal bounds
+                const tooltipLeftEdge = tooltipScreenX - tooltipWidth / 2;
+                const tooltipRightEdge = tooltipScreenX + tooltipWidth / 2;
+
+                if (tooltipLeftEdge < edgePadding) {
+                  shiftX = edgePadding - tooltipLeftEdge;
+                } else if (tooltipRightEdge > containerWidth - edgePadding) {
+                  shiftX = containerWidth - edgePadding - tooltipRightEdge;
+                }
+
                 return (
                   <div
                     style={{
                       position: 'absolute',
-                      top: spiderHover.y - halfSize - 10, // Above the node
-                      left: spiderHover.x,
-                      transform: 'translate(-50%, -100%)',
+                      top: flipVertical
+                        ? spiderHover.y + halfSize + 10  // Below the node
+                        : spiderHover.y - halfSize - 10, // Above the node
+                      left: spiderHover.x + shiftX,
+                      transform: flipVertical
+                        ? 'translate(-50%, 0)'  // Anchor at top
+                        : 'translate(-50%, -100%)', // Anchor at bottom
                       zIndex: 1000,
                       pointerEvents: 'none',
                     }}
@@ -970,21 +1092,46 @@ export default function MapLibreMap({
           );
         })()}
 
-        {/* Hover Preview Popup */}
-        {hoveredNode && hoverPosition && (
-          <Popup
-            longitude={hoverPosition.longitude}
-            latitude={hoverPosition.latitude}
-            anchor="bottom"
-            offset={24}
-            closeButton={false}
-            closeOnClick={false}
-            className="node-hover-popup"
-            maxWidth="none"
-          >
-            <NodeHoverPreview node={hoveredNode} />
-          </Popup>
-        )}
+        {/* Hover Preview Popup - with smart anchor positioning */}
+        {hoveredNode && hoverPosition && (() => {
+          // Calculate optimal anchor based on node's screen position
+          const tooltipHeight = 200; // Approximate height
+          const edgePadding = 20;
+          let anchor: 'bottom' | 'top' | 'left' | 'right' = 'bottom';
+
+          if (mapRef.current) {
+            const point = mapRef.current.project([hoverPosition.longitude, hoverPosition.latitude]);
+            const containerBounds = containerRef.current?.getBoundingClientRect();
+
+            // If node is near top, show popup below (anchor="top")
+            if (point.y < tooltipHeight + edgePadding) {
+              anchor = 'top';
+            }
+            // If near left edge, show popup on right
+            else if (containerBounds && point.x < 150) {
+              anchor = 'right';
+            }
+            // If near right edge, show popup on left
+            else if (containerBounds && point.x > containerBounds.width - 150) {
+              anchor = 'left';
+            }
+          }
+
+          return (
+            <Popup
+              longitude={hoverPosition.longitude}
+              latitude={hoverPosition.latitude}
+              anchor={anchor}
+              offset={24}
+              closeButton={false}
+              closeOnClick={false}
+              className="node-hover-popup"
+              maxWidth="none"
+            >
+              <NodeHoverPreview node={hoveredNode} />
+            </Popup>
+          );
+        })()}
       </Map>
 
       {/* Loading overlay */}

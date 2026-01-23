@@ -119,6 +119,12 @@ export const MarkerCategorySchema = z.object({
   priority: z.number().int().positive('Priority must be a positive integer'),
 });
 
+export const VersionStatusColorsSchema = z.object({
+  current: HexColorSchema.nullable().optional(),  // null = no indicator
+  outdated: HexColorSchema,
+  critical: HexColorSchema,
+});
+
 export const ThemeConfigSchema = z.object({
   name: z.string().min(1, 'Theme name is required'),
   primaryColor: HexColorSchema,
@@ -134,6 +140,7 @@ export const ThemeConfigSchema = z.object({
     standard: TierColorConfigSchema,
   }),
   offlineColor: HexColorSchema,
+  versionStatusColors: VersionStatusColorsSchema.optional(),
   markerCategories: z.record(MarkerCategorySchema).optional(),
 });
 
@@ -443,6 +450,13 @@ export const AssetsConfigSchema = z.object({
   logoPath: z.string().min(1, 'Logo path is required'),
   faviconPath: z.string().min(1, 'Favicon path is required'),
   ogImagePath: z.string().min(1, 'OG image path is required'),
+  markerIconPath: z.string().optional(),  // Default node marker icon (falls back to logoPath)
+  // Version-specific marker icons (optional - falls back to markerIconPath/logoPath)
+  markerIconOutdatedPath: z.string().optional(),  // Marker for outdated version nodes
+  markerIconCriticalPath: z.string().optional(),  // Marker for critical version nodes
+  markerIconOfflinePath: z.string().optional(),   // Marker for offline nodes
+  // Override behavior: if true, version-specific icons override custom user avatars
+  overrideAvatarWhenOutdated: z.boolean().optional().default(false),
 });
 
 // ===========================================

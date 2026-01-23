@@ -7,7 +7,7 @@
  * Fallback default colors are provided if config doesn't specify them.
  */
 
-import type { NodeTier, NodeStatus, TierColorConfig } from '@atlasp2p/types';
+import type { NodeTier, NodeStatus, TierColorConfig, VersionStatus, VersionStatusColors } from '@atlasp2p/types';
 import { getThemeConfig } from '@/config';
 
 // Fallback defaults (used if not specified in YAML)
@@ -42,6 +42,13 @@ const DEFAULT_TIER_COLORS: Record<NodeTier, TierColorConfig> = {
 const DEFAULT_OFFLINE_COLOR = '#94a3b8';
 const DEFAULT_REACHABLE_COLOR = '#f59e0b'; // Orange/warning for TCP-only connections
 
+// Version status colors (ring/border around node marker)
+const DEFAULT_VERSION_STATUS_COLORS: VersionStatusColors = {
+  current: null,        // No indicator for current version
+  outdated: '#f97316',  // Orange ring for outdated
+  critical: '#ef4444',  // Red ring for critical
+};
+
 /**
  * Get tier colors from config or use defaults
  * Memoized to avoid repeated config reads
@@ -49,6 +56,7 @@ const DEFAULT_REACHABLE_COLOR = '#f59e0b'; // Orange/warning for TCP-only connec
 let _cachedTierColors: Record<NodeTier, TierColorConfig> | null = null;
 let _cachedOfflineColor: string | null = null;
 let _cachedReachableColor: string | null = null;
+let _cachedVersionStatusColors: VersionStatusColors | null = null;
 
 function getTierColorsFromConfig(): Record<NodeTier, TierColorConfig> {
   if (_cachedTierColors) {
@@ -60,11 +68,13 @@ function getTierColorsFromConfig(): Record<NodeTier, TierColorConfig> {
     _cachedTierColors = theme.tierColors || DEFAULT_TIER_COLORS;
     _cachedOfflineColor = theme.offlineColor || DEFAULT_OFFLINE_COLOR;
     _cachedReachableColor = (theme as any).reachableColor || DEFAULT_REACHABLE_COLOR;
+    _cachedVersionStatusColors = theme.versionStatusColors || DEFAULT_VERSION_STATUS_COLORS;
   } catch (error) {
     // Fallback to defaults if config unavailable (e.g., client-side)
     _cachedTierColors = DEFAULT_TIER_COLORS;
     _cachedOfflineColor = DEFAULT_OFFLINE_COLOR;
     _cachedReachableColor = DEFAULT_REACHABLE_COLOR;
+    _cachedVersionStatusColors = DEFAULT_VERSION_STATUS_COLORS;
   }
 
   return _cachedTierColors;
@@ -139,10 +149,45 @@ export function getAllTierColors(): Array<{ tier: NodeTier; color: string; icon:
 }
 
 /**
+ * Get version status color for ring/border indicator
+ * Returns null if no indicator should be shown (e.g., for current version)
+ *
+ * @param versionStatus - Version status ('current', 'outdated', 'critical')
+ * @returns Hex color code or null if no indicator
+ */
+export function getVersionStatusColor(versionStatus: VersionStatus | null | undefined): string | null {
+  // Initialize cache if needed
+  getTierColorsFromConfig();
+
+  if (!versionStatus || versionStatus === 'current') {
+    return _cachedVersionStatusColors?.current || null;
+  }
+
+  if (versionStatus === 'outdated') {
+    return _cachedVersionStatusColors?.outdated || DEFAULT_VERSION_STATUS_COLORS.outdated;
+  }
+
+  if (versionStatus === 'critical') {
+    return _cachedVersionStatusColors?.critical || DEFAULT_VERSION_STATUS_COLORS.critical;
+  }
+
+  return null;
+}
+
+/**
+ * Get all version status colors (useful for legends)
+ */
+export function getAllVersionStatusColors(): VersionStatusColors {
+  getTierColorsFromConfig();
+  return _cachedVersionStatusColors || DEFAULT_VERSION_STATUS_COLORS;
+}
+
+/**
  * Reset cache (useful for testing or config hot-reload)
  */
 export function resetTierColorCache(): void {
   _cachedTierColors = null;
   _cachedOfflineColor = null;
   _cachedReachableColor = null;
+  _cachedVersionStatusColors = null;
 }

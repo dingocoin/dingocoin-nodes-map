@@ -114,6 +114,13 @@ themeConfig:
   # Offline node color (gray for all tiers when offline)
   offlineColor: "#94a3b8"
 
+  # Version status colors (ring/border around node marker)
+  # Shows visual indicator for nodes running outdated or critical versions
+  versionStatusColors:
+    current: null           # No indicator for current version (null = no ring)
+    outdated: "#f97316"     # Orange ring for outdated versions
+    critical: "#ef4444"     # Red ring for critical versions (needs urgent update)
+
   # Marker category metadata (icons, sizes, descriptions)
   markerCategories:
     diamond:
@@ -553,6 +560,13 @@ assets:
   logoPath: /logos/atlasp2p.svg
   faviconPath: /logos/atlasp2p-favicon.ico
   ogImagePath: /logos/atlasp2p-og.png
+  markerIconPath: /logos/marker-icon.svg  # Default node marker (can be different from main logo)
+  # Version-specific marker icons (optional - falls back to markerIconPath if not set)
+  # markerIconOutdatedPath: /logos/marker-outdated.svg  # For nodes with outdated versions
+  # markerIconCriticalPath: /logos/marker-critical.svg  # For nodes with critically old versions
+  # markerIconOfflinePath: /logos/marker-offline.svg    # For offline nodes
+  # Override behavior: if true, version-specific icons replace custom user avatars when outdated
+  overrideAvatarWhenOutdated: false
 
 # ===========================================
 # DEPLOYMENT CONFIGURATION
