@@ -1,0 +1,26 @@
+# ===========================================
+# PRE-COMMIT HOOK
+# ===========================================
+# Runs on both upstream and forks
+# Validates config schema if config exists
+
+echo "Running pre-commit checks..."
+
+# Check if node_modules exists (skip validation if deps not installed)
+if [ ! -d "node_modules" ]; then
+  echo "Warning: node_modules not found, skipping config validation"
+  echo "Run 'pnpm install' to enable full validation"
+  exit 0
+fi
+
+# Check if config exists and validate it
+if [ -f "config/project.config.yaml" ]; then
+  echo "Validating project.config.yaml..."
+  node scripts/validate-config.mjs
+  if [ $? -ne 0 ]; then
+    echo "Config validation failed. Fix errors before committing."
+    exit 1
+  fi
+fi
+
+echo "Pre-commit checks passed!"

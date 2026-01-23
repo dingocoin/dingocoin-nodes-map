@@ -1,0 +1,66 @@
+# ===========================================
+# PRE-PUSH HOOK
+# ===========================================
+# Prevents pushing fork-specific files to upstream (AtlasP2P)
+# Allows pushing everything to fork remotes
+
+# Get the remote being pushed to
+remote="$1"
+url="$2"
+
+echo "Pre-push check: pushing to $remote ($url)"
+
+# Define upstream patterns (AtlasP2P repo URLs)
+UPSTREAM_PATTERNS="RaxTzu/AtlasP2P|atlasp2p/atlasp2p"
+
+# Check if pushing to upstream
+if echo "$url" | grep -qiE "$UPSTREAM_PATTERNS"; then
+  echo "Detected push to UPSTREAM (AtlasP2P)"
+
+  # Files that should NEVER be in upstream
+  FORBIDDEN_FILES="
+    .github/workflows/deploy.yml
+    config/project.config.yaml
+  "
+
+  # Get list of files being pushed
+  while read local_ref local_sha remote_ref remote_sha; do
+    # Skip delete pushes
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+      continue
+    fi
+
+    # Get range of commits being pushed
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+      range="$local_sha"
+    else
+      range="$remote_sha..$local_sha"
+    fi
+
+    # Check each forbidden file
+    for file in $FORBIDDEN_FILES; do
+      # Check if file exists in the tree at local_sha
+      if git ls-tree -r --name-only "$local_sha" 2>/dev/null | grep -q "^${file}$"; then
+        echo ""
+        echo "ERROR: Fork-specific file exists in branch being pushed!"
+        echo "  File: $file"
+        echo ""
+        echo "This file should NOT be tracked in AtlasP2P upstream."
+        echo ""
+        echo "To fix:"
+        echo "  1. Remove from git tracking: git rm --cached $file"
+        echo "  2. Make sure it's in .gitignore"
+        echo "  3. Commit the removal"
+        echo "  4. Push again"
+        echo ""
+        exit 1
+      fi
+    done
+  done
+
+  echo "Upstream push check passed - no fork-specific files detected"
+else
+  echo "Pushing to fork remote - all files allowed"
+fi
+
+echo "Pre-push checks passed!"
