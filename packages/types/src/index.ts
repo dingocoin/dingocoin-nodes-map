@@ -8,6 +8,7 @@
 
 export type NodeStatus = 'pending' | 'up' | 'down' | 'reachable';
 export type NodeTier = 'diamond' | 'gold' | 'silver' | 'bronze' | 'standard';
+export type VersionStatus = 'current' | 'outdated' | 'critical';
 export type ConnectionType = 'ipv4' | 'ipv6' | 'onion';
 export type VerificationMethod = 'message_sign' | 'user_agent' | 'port_challenge' | 'dns_txt' | 'http_file';
 export type VerificationStatus = 'pending' | 'verified' | 'failed' | 'expired';
@@ -330,6 +331,12 @@ export interface SemanticColors {
   danger: string;       // Dark red - dangerous actions
 }
 
+export interface VersionStatusColors {
+  current?: string | null;  // null/undefined = no indicator for current version
+  outdated: string;         // Orange ring for outdated
+  critical: string;         // Red ring for critical
+}
+
 export interface ThemeConfig {
   name: string;
   primaryColor: string;
@@ -340,6 +347,7 @@ export interface ThemeConfig {
   semanticColors?: SemanticColors;
   tierColors: Record<NodeTier, TierColorConfig>;
   offlineColor: string;
+  versionStatusColors?: VersionStatusColors;
   markerCategories?: Record<string, MarkerCategory>;
 }
 
@@ -513,6 +521,13 @@ export interface ProjectConfig {
     logoPath: string;
     faviconPath: string;
     ogImagePath: string;
+    markerIconPath?: string;  // Default node marker icon (falls back to logoPath)
+    // Version-specific marker icons (optional - falls back to markerIconPath/logoPath)
+    markerIconOutdatedPath?: string;  // Marker for outdated version nodes
+    markerIconCriticalPath?: string;  // Marker for critical version nodes
+    markerIconOfflinePath?: string;   // Marker for offline nodes
+    // Override behavior: if true, version-specific icons override custom user avatars
+    overrideAvatarWhenOutdated?: boolean;
   };
 }
 

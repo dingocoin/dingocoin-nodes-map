@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { getTierColor } from '@/lib/theme-colors';
-import { getThemeConfig } from '@/config';
+import { getThemeConfig, getAssetPaths } from '@/config';
 import type { NodeWithProfile, NodeTier } from '@atlasp2p/types';
 
 interface ClusterMarkerProps {
@@ -13,6 +13,8 @@ interface ClusterMarkerProps {
 
 export default function ClusterMarker({ count, nodes, onClick }: ClusterMarkerProps) {
   const theme = getThemeConfig();
+  const assets = getAssetPaths();
+  const defaultMarkerIcon = assets.markerIconPath || assets.logoPath;
 
   // Count online nodes
   const onlineCount = useMemo(() => {
@@ -50,8 +52,8 @@ export default function ClusterMarker({ count, nodes, onClick }: ClusterMarkerPr
   // Get tier color for the badge border
   const tierColor = getTierColor(topNode?.tier || 'standard', true);
 
-  // Image source - avatar or default marker
-  const imageSrc = topNode?.avatarUrl || '/logos/dingocoin.png';
+  // Image source - avatar or default marker (from config)
+  const imageSrc = topNode?.avatarUrl || defaultMarkerIcon;
   const isCustomAvatar = !!topNode?.avatarUrl;
 
   return (
