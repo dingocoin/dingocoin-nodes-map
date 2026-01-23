@@ -377,6 +377,31 @@ export async function verifyMessageSignature(
   }
 }
 
+// DNS query timeout in milliseconds
+const DNS_QUERY_TIMEOUT = 10000; // 10 seconds
+
+/**
+ * Helper to create a fetch request with timeout
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = DNS_QUERY_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Verify DNS TXT record contains the challenge AND domain resolves to node IP
  *
@@ -404,7 +429,7 @@ export async function verifyDnsTxt(
     }
 
     // Step 1: Check TXT record (proves domain ownership)
-    const txtResponse = await fetch(
+    const txtResponse = await fetchWithTimeout(
       `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=TXT`,
       {
         headers: {
@@ -449,45 +474,55 @@ export async function verifyDnsTxt(
     const resolvedIps: string[] = [];
 
     // Query A records (IPv4)
-    const ipv4Response = await fetch(
-      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`,
-      {
-        headers: {
-          Accept: 'application/dns-json',
-        },
-      }
-    );
+    try {
+      const ipv4Response = await fetchWithTimeout(
+        `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`,
+        {
+          headers: {
+            Accept: 'application/dns-json',
+          },
+        }
+      );
 
-    if (ipv4Response.ok) {
-      const ipv4Data = await ipv4Response.json();
-      if (ipv4Data.Answer && Array.isArray(ipv4Data.Answer)) {
-        ipv4Data.Answer.forEach((record: any) => {
-          if (record.type === 1) { // 1 = A record
-            resolvedIps.push(record.data);
-          }
-        });
+      if (ipv4Response.ok) {
+        const ipv4Data = await ipv4Response.json();
+        if (ipv4Data.Answer && Array.isArray(ipv4Data.Answer)) {
+          ipv4Data.Answer.forEach((record: any) => {
+            if (record.type === 1) { // 1 = A record
+              resolvedIps.push(record.data);
+            }
+          });
+        }
       }
+    } catch (ipv4Error) {
+      // IPv4 query failed, continue with IPv6
+      console.warn('IPv4 DNS query failed:', ipv4Error);
     }
 
     // Query AAAA records (IPv6)
-    const ipv6Response = await fetch(
-      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=AAAA`,
-      {
-        headers: {
-          Accept: 'application/dns-json',
-        },
-      }
-    );
+    try {
+      const ipv6Response = await fetchWithTimeout(
+        `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=AAAA`,
+        {
+          headers: {
+            Accept: 'application/dns-json',
+          },
+        }
+      );
 
-    if (ipv6Response.ok) {
-      const ipv6Data = await ipv6Response.json();
-      if (ipv6Data.Answer && Array.isArray(ipv6Data.Answer)) {
-        ipv6Data.Answer.forEach((record: any) => {
-          if (record.type === 28) { // 28 = AAAA record
-            resolvedIps.push(record.data);
-          }
-        });
+      if (ipv6Response.ok) {
+        const ipv6Data = await ipv6Response.json();
+        if (ipv6Data.Answer && Array.isArray(ipv6Data.Answer)) {
+          ipv6Data.Answer.forEach((record: any) => {
+            if (record.type === 28) { // 28 = AAAA record
+              resolvedIps.push(record.data);
+            }
+          });
+        }
       }
+    } catch (ipv6Error) {
+      // IPv6 query failed, continue with what we have
+      console.warn('IPv6 DNS query failed:', ipv6Error);
     }
 
     // Check if domain resolves to any IP
@@ -511,6 +546,13 @@ export async function verifyDnsTxt(
       valid: true,
     };
   } catch (error) {
+    // Handle timeout errors specifically
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        valid: false,
+        error: 'DNS query timed out. Please try again.',
+      };
+    }
     return {
       valid: false,
       error: error instanceof Error ? error.message : 'DNS verification failed',

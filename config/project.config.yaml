@@ -215,6 +215,19 @@ content:
   copyrightText: Created by Dingocoin Guardians.
   githubRepoUrl: https://github.com/dingocoin/dingocoin-nodes-map
 
+  # SEO Configuration (optional - uses site defaults if not specified)
+  seo:
+    keywords:
+      - dingocoin
+      - dingo
+      - nodes
+      - blockchain
+      - cryptocurrency
+      - network
+      - p2p
+    twitterHandle: "@dingocoincrypto"
+    robots: "index, follow"
+
 # ===========================================
 # MAP CONFIGURATION
 # ===========================================
@@ -463,8 +476,8 @@ features:
 
   # Analytics tracking
   analytics:
-    enabled: false
-    provider: null  # plausible | google | matomo | fathom
+    enabled: true
+    provider: posthog  # plausible | google | matomo | fathom | posthog
     domain: null
 
   # Error tracking (Sentry, etc.)
@@ -517,7 +530,7 @@ deployment:
     # Source: auto (will detect available secrets), aws-ssm, github-secrets, or manual
     source: auto
     # AWS SSM Parameter Store path
-    ssmPath: /atlasp2p/prod/env
+    ssmPath: /Dingocoin/NodesMap/Production
 
   # Docker Registry configuration
   registry:

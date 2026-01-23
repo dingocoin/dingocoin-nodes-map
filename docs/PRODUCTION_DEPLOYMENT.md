@@ -241,6 +241,11 @@ TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
 # Optional: Custom domain
 DOMAIN=nodes.dingocoin.com
 ACME_EMAIL=admin@dingocoin.com
+
+# Optional: Analytics (PostHog)
+# Get keys from: https://posthog.com/ (free tier available)
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_key
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com  # or https://us.i.posthog.com
 ```
 
 ### Required for Crawler
@@ -293,8 +298,8 @@ See **[SUPABASE_STORAGE_SETUP.md](./SUPABASE_STORAGE_SETUP.md)** for complete gu
 ### Pre-Deployment
 
 - [ ] **Choose deployment mode** (self-hosted vs cloud Supabase)
-- [ ] Review `BEST_PRACTICES_REVIEW.md` for crawler improvements
-- [ ] Review `CRAWLER_IMPROVEMENTS.md` for retry logic and protocol negotiation
+- [ ] Review crawler logs for any connectivity issues
+- [ ] Verify chain configuration in `config/project.config.yaml`
 - [ ] **If using Cloud Supabase:**
   - [ ] Create Supabase project
   - [ ] Run migrations: `supabase db push`

@@ -54,85 +54,46 @@ export default function NodeHoverPreview({ node }: NodeHoverPreviewProps) {
 
   return (
     <div
+      className="min-w-[180px] max-w-[220px] sm:min-w-[240px] sm:max-w-[280px] bg-card rounded-xl p-2.5 sm:p-3 shadow-xl backdrop-blur-md pointer-events-none z-[1000] text-[11px] sm:text-[13px] leading-snug"
       style={{
-        minWidth: '240px',
-        maxWidth: '280px',
-        backgroundColor: 'var(--color-card)',
         border: `2px solid ${tierColor}`,
-        borderRadius: '12px',
-        padding: '12px',
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: '13px',
-        lineHeight: '1.4',
-        backdropFilter: 'blur(10px)',
-        pointerEvents: 'none',
-        zIndex: 1000,
       }}
     >
       {/* Header with IP and status */}
-      <div style={{ marginBottom: '10px', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '4px',
-        }}>
-          <div style={{
-            fontWeight: '600',
-            fontSize: '14px',
-            color: 'var(--color-card-foreground)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-          }}>
+      <div className="mb-2 sm:mb-2.5 border-b border-border pb-2">
+        <div className="flex items-center justify-between mb-1">
+          <div className="font-semibold text-xs sm:text-sm text-card-foreground truncate flex-1">
             {node.displayName || `${node.ip}:${node.port}`}
           </div>
           {StatusIconComponent && (
             <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                marginLeft: '8px',
-              }}
+              className="inline-flex items-center ml-2 flex-shrink-0"
               dangerouslySetInnerHTML={{
                 __html: renderToStaticMarkup(
-                  <StatusIconComponent size={16} color={statusColor} strokeWidth={2.5} />
+                  <StatusIconComponent size={14} color={statusColor} strokeWidth={2.5} />
                 ),
               }}
             />
           )}
         </div>
         {node.displayName && (
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--color-muted-foreground)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
+          <div className="text-[9px] sm:text-[11px] text-muted-foreground truncate">
             {node.ip}:{node.port}
           </div>
         )}
       </div>
 
       {/* Tier info */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '8px',
-        gap: '8px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+      <div className="flex items-center mb-2 gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-1">
           {TierIconComponent && (
             <div
-              style={{ display: 'inline-flex', alignItems: 'center' }}
+              className="inline-flex items-center flex-shrink-0"
               dangerouslySetInnerHTML={{
-                // eslint-disable-next-line -- Valid pattern: renderToStaticMarkup for Leaflet HTML
                 __html: renderToStaticMarkup(
                   <TierIconComponent
-                    size={16}
+                    size={14}
                     color={tierColor}
                     strokeWidth={2.5}
                     fill={node.tier === 'diamond' ? tierColor : 'none'}
@@ -141,121 +102,70 @@ export default function NodeHoverPreview({ node }: NodeHoverPreviewProps) {
               }}
             />
           )}
-          <span style={{
-            fontWeight: '600',
-            color: tierColor,
-            fontSize: '13px',
-          }}>
+          <span className="font-semibold text-[11px] sm:text-[13px]" style={{ color: tierColor }}>
             {tierLabel}
           </span>
         </div>
         {node.isVerified && (
-          <div
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              padding: '2px 8px',
-              borderRadius: '10px',
-              fontSize: '11px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
+          <div className="bg-blue-500 text-white px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-semibold flex items-center gap-1 flex-shrink-0">
             <div
               dangerouslySetInnerHTML={{
                 __html: renderToStaticMarkup(
-                  <LucideIcons.BadgeCheck size={12} color="white" strokeWidth={2.5} />
+                  <LucideIcons.BadgeCheck size={10} color="white" strokeWidth={2.5} />
                 ),
               }}
             />
-            Verified
+            <span className="hidden sm:inline">Verified</span>
+            <span className="sm:hidden">✓</span>
           </div>
         )}
       </div>
 
       {/* Stats grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
-        marginBottom: '8px',
-      }}>
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-2">
         {/* Country */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '10px', color: 'var(--color-muted-foreground)', marginBottom: '2px' }}>
-            Country
-          </div>
-          <div style={{
-            fontWeight: '600',
-            color: 'var(--color-card-foreground)',
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
+        <div className="flex flex-col">
+          <div className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Country</div>
+          <div className="font-semibold text-card-foreground text-[10px] sm:text-xs flex items-center gap-1">
             {countryFlag && <span>{countryFlag}</span>}
-            <span>{node.countryCode || 'Unknown'}</span>
+            <span>{node.countryCode || '??'}</span>
           </div>
         </div>
 
         {/* Uptime */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '10px', color: 'var(--color-muted-foreground)', marginBottom: '2px' }}>
-            Uptime
-          </div>
-          <div style={{
-            fontWeight: '600',
-            color: node.uptime >= 99 ? '#22c55e' : node.uptime >= 95 ? '#f59e0b' : '#ef4444',
-            fontSize: '12px',
-          }}>
+        <div className="flex flex-col">
+          <div className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Uptime</div>
+          <div
+            className="font-semibold text-[10px] sm:text-xs"
+            style={{ color: node.uptime >= 99 ? '#22c55e' : node.uptime >= 95 ? '#f59e0b' : '#ef4444' }}
+          >
             {uptimeDisplay}
           </div>
         </div>
 
         {/* Version */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '10px', color: 'var(--color-muted-foreground)', marginBottom: '2px' }}>
-            Version
-          </div>
-          <div style={{
-            fontWeight: '600',
-            color: 'var(--color-card-foreground)',
-            fontSize: '12px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {node.version || 'Unknown'}
+        <div className="flex flex-col">
+          <div className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Version</div>
+          <div className="font-semibold text-card-foreground text-[10px] sm:text-xs truncate">
+            {node.clientVersion || node.version || '?'}
           </div>
         </div>
 
         {/* Latency */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '10px', color: 'var(--color-muted-foreground)', marginBottom: '2px' }}>
-            Latency
-          </div>
-          <div style={{
-            fontWeight: '600',
-            color: node.latencyAvg && node.latencyAvg < 100 ? '#22c55e' : node.latencyAvg && node.latencyAvg < 300 ? '#f59e0b' : '#ef4444',
-            fontSize: '12px',
-          }}>
+        <div className="flex flex-col">
+          <div className="text-[9px] sm:text-[10px] text-muted-foreground mb-0.5">Latency</div>
+          <div
+            className="font-semibold text-[10px] sm:text-xs"
+            style={{ color: node.latencyAvg && node.latencyAvg < 100 ? '#22c55e' : node.latencyAvg && node.latencyAvg < 300 ? '#f59e0b' : '#ef4444' }}
+          >
             {node.latencyAvg ? `${Math.round(node.latencyAvg)}ms` : 'N/A'}
           </div>
         </div>
       </div>
 
       {/* Footer hint */}
-      <div style={{
-        fontSize: '10px',
-        color: 'var(--color-muted-foreground)',
-        textAlign: 'center',
-        marginTop: '8px',
-        paddingTop: '8px',
-        borderTop: '1px solid var(--color-border)',
-      }}>
-        Click for full details
+      <div className="text-[9px] sm:text-[10px] text-muted-foreground text-center mt-2 pt-2 border-t border-border">
+        Click for details
       </div>
     </div>
   );

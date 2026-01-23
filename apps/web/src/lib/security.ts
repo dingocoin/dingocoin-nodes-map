@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 import { getAnonymousRateLimit, getAuthenticatedRateLimit } from './config-overrides';
 
@@ -161,23 +161,39 @@ export async function logAdminAction(
   details?: Record<string, any>,
   request?: NextRequest
 ): Promise<void> {
-  const supabase = await createClient();
+  try {
+    const adminClient = createAdminClient();
 
-  const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] ||
-             request?.headers.get('x-real-ip') ||
+    let ip = request?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+             request?.headers.get('x-real-ip')?.trim() ||
              null;
 
-  const userAgent = request?.headers.get('user-agent') || null;
+    // Strip port if present (e.g., "172.64.215.120:20283" -> "172.64.215.120")
+    if (ip && ip.includes(':') && !ip.includes('[')) {
+      // IPv4 with port - split on last colon
+      ip = ip.split(':')[0];
+    }
 
-  await supabase.rpc('log_admin_action', {
-    p_admin_id: adminId,
-    p_action: action,
-    p_resource_type: resourceType,
-    p_resource_id: resourceId || null,
-    p_details: details ? JSON.stringify(details) : null,
-    p_ip_address: ip,
-    p_user_agent: userAgent
-  });
+    const userAgent = request?.headers.get('user-agent') || null;
+
+    const { error } = await adminClient
+      .from('audit_log')
+      .insert({
+        admin_id: adminId,
+        action,
+        resource_type: resourceType,
+        resource_id: resourceId || null,
+        details: details || null,
+        ip_address: ip,
+        user_agent: userAgent
+      });
+
+    if (error) {
+      console.error('[Audit] Failed to log admin action:', error);
+    }
+  } catch (err) {
+    console.error('[Audit] Error logging admin action:', err);
+  }
 }
 
 /**

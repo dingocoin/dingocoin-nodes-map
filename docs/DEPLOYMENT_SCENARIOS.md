@@ -235,8 +235,8 @@ If using `make prod-docker-no-caddy`, you must configure host Caddy first:
 cp docker/Caddyfile.host.example /tmp/nodesmap.Caddyfile
 
 # 2. Edit with your actual values (from .env):
-#    - SITE_URL → nodes.yourchain.com
-#    - API_EXTERNAL_URL → api.nodes.yourchain.com
+#    - SITE_URL → https://nodes.yourchain.com
+#    - API_EXTERNAL_URL → https://nodes.yourchain.com/supabase
 #    - WEB_PORT → localhost:4000
 #    - KONG_PORT → localhost:4020
 nano /tmp/nodesmap.Caddyfile

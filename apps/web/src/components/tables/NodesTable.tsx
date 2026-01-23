@@ -90,7 +90,7 @@ export function NodesTable({ nodes, onNodeClick }: NodesTableProps) {
         ),
       },
       {
-        accessorKey: 'location',
+        accessorKey: 'countryName',
         header: 'Location',
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5">
@@ -127,7 +127,7 @@ export function NodesTable({ nodes, onNodeClick }: NodesTableProps) {
         },
       },
       {
-        accessorKey: 'verified',
+        accessorKey: 'isVerified',
         header: 'Verified',
         cell: ({ row }) => (
           <div className="flex items-center justify-center">

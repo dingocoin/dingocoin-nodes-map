@@ -188,6 +188,8 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 TURNSTILE_SECRET_KEY=...  # Cloudflare Turnstile (if enabled)
+NEXT_PUBLIC_POSTHOG_KEY=...  # PostHog analytics (optional)
+NEXT_PUBLIC_POSTHOG_HOST=...  # e.g., https://eu.i.posthog.com
 POSTGRES_PASSWORD=...
 JWT_SECRET=...
 SMTP_HOST=...
@@ -598,14 +600,14 @@ chainConfig:
   p2pPort: 33117
 
 content:
-  siteUrl: "https://nodes-dingocoin.raxtzu.com"
+  siteUrl: "https://nodes.dingocoin.com"
 ```
 
 **Derived values:**
 - `CHAIN_NAME`: "Dingocoin"
 - `DAEMON_NAMES`: "dingocoind,dingocoin-qt" (auto-derived from chain name)
 - `DEFAULT_PORT`: "33117"
-- `API_URL`: "https://nodes-dingocoin.raxtzu.com"
+- `API_URL`: "https://nodes.dingocoin.com"
 
 ### Build Process
 

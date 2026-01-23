@@ -738,7 +738,10 @@ class Crawler:
                         else:
                             last_seen_dt = last_seen
 
-                        minutes_since = (datetime.now(timezone.utc) - last_seen_dt.replace(tzinfo=None)).total_seconds() / 60
+                        # Ensure last_seen_dt is timezone-aware (assume UTC if naive)
+                        if last_seen_dt.tzinfo is None:
+                            last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
+                        minutes_since = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() / 60
 
                         # Always re-check "up" and "reachable" nodes to detect outages quickly
                         # These nodes should be checked every crawl pass
@@ -760,6 +763,44 @@ class Crawler:
                 if should_crawl:
                     self.pending.add(key)
                     self.stats["peers_from_db"] += 1
+
+                    # CRITICAL: Populate self.nodes with existing DB data
+                    # This preserves version info when nodes go offline
+                    # Without this, failed connections create new NodeInfo with no version,
+                    # which gets skipped by requireVersionForSave and never marks node as "down"
+                    first_seen = node.get("first_seen")
+                    if isinstance(first_seen, str):
+                        first_seen_dt = datetime.fromisoformat(first_seen.replace('Z', '+00:00'))
+                    elif first_seen:
+                        first_seen_dt = first_seen
+                    else:
+                        first_seen_dt = datetime.now(timezone.utc)
+
+                    # Handle last_seen (may not be set if we took the else branch above)
+                    if not last_seen:
+                        last_seen_dt = datetime.now(timezone.utc)
+
+                    # Ensure timezone-aware
+                    if first_seen_dt.tzinfo is None:
+                        first_seen_dt = first_seen_dt.replace(tzinfo=timezone.utc)
+                    if last_seen_dt.tzinfo is None:
+                        last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
+
+                    self.nodes[key] = NodeInfo(
+                        ip=str(ip),
+                        port=port,
+                        status=status,
+                        latency_ms=node.get("latency_ms"),
+                        version=node.get("version"),
+                        protocol_version=node.get("protocol_version"),
+                        services=node.get("services"),
+                        start_height=node.get("start_height"),
+                        user_agent=node.get("version"),  # version field stores user_agent
+                        peers=[],
+                        last_seen=last_seen_dt,
+                        first_seen=first_seen_dt,
+                        times_seen=node.get("times_seen", 0),
+                    )
 
             logger.info("Seeded from database", count=self.stats["peers_from_db"])
 

@@ -138,6 +138,71 @@ The database follows Supabase's official architecture with a professional 4-laye
 - Accepted coins, minimum amounts
 - Thank you messages
 
+**network_history** - Historical network statistics snapshots
+- Periodic snapshots of network state (total nodes, online nodes, countries)
+- Tier distribution (diamond, gold, silver, bronze counts)
+- Average metrics (uptime, latency, PIX score)
+- Most common version tracking
+
+**admin_users** - Administrator privileges
+- Links user_id to admin status
+- Active/inactive flag
+- Admin assignment tracking
+
+**banned_users** - User ban management
+- User bans with optional expiration
+- Ban reason and admin notes
+- Permanent or temporary ban flag
+
+**moderation_queue** - Content moderation workflow
+- Item types: avatar, profile, verification
+- Status: pending → approved/rejected/flagged
+- Reviewer tracking and notes
+- Flag workflow with flagged_by/flagged_at (multi-admin review)
+
+**audit_log** - Admin action audit trail
+- All admin actions logged with timestamp
+- Resource type and ID
+- IP address and user agent
+- JSONB details for action-specific data
+
+**rate_limits** - Distributed rate limiting
+- Per-user or per-IP rate tracking
+- Endpoint-specific limits
+- Sliding window implementation
+
+**admin_settings** - Runtime configuration
+- Key-value settings with JSONB values
+- Category grouping (general, alerts, api, etc.)
+- Public/private visibility flag
+- Override defaults from project.config.yaml
+
+**alert_subscriptions** - Node monitoring alerts
+- Per-node alert configuration
+- Alert types: offline, online, version outdated, tier change
+- Delivery methods: email, Discord webhook
+- Cooldown to prevent spam
+
+**alert_history** - Alert delivery log
+- Tracks sent alerts per subscription
+- Email/webhook delivery status and errors
+- Message content and metadata
+
+**api_keys** - Programmatic API access
+- User-owned API keys with hashed storage
+- Scoped permissions (read:nodes, read:stats, etc.)
+- Rate limits and usage tracking
+- Expiration and revocation support
+
+**api_key_usage** - API usage analytics
+- Per-request logging
+- Endpoint, method, status code, response time
+- IP address and user agent tracking
+
+**default_avatars** - System-provided avatars
+- Pre-configured avatar options
+- Display order and active status
+
 ### Row Level Security (RLS)
 
 All tables have RLS enabled with policies:
@@ -320,7 +385,6 @@ All tables have RLS enabled with policies:
 **API Endpoints**:
 - `GET /api/nodes/:nodeId/tip-config` - Get tip config
 - `PUT /api/nodes/:nodeId/tip-config` - Update (authenticated)
-- `POST /api/tips` - Record tip (optional)
 
 **Frontend**:
 - TipModal with QR code and copyable address
@@ -485,12 +549,15 @@ make prod-docker-no-caddy
 ### Authenticated Endpoints (JWT Required)
 
 **Verification**:
-- `POST /api/verify` - Start node verification
+- `POST /api/verify` - Start node verification (single-step methods)
+  - Body: `{ nodeId, method, signature?, userAgent? }`
+  - Returns: Verification result or challenge
+- `POST /api/verify-node/init` - Initialize two-step verification
   - Body: `{ nodeId, method }`
-  - Returns: Challenge object
-- `POST /api/verify/:id/complete` - Submit verification proof
-  - Body: `{ proof }` (signature, user agent, etc.)
-- `GET /api/verify/:id` - Check verification status
+  - Returns: Challenge object with verificationId
+- `POST /api/verify-node/confirm` - Confirm two-step verification
+  - Body: `{ verificationId, signature?, dnsValue? }`
+- `GET /api/verify/dns-check` - Check DNS TXT record status
 
 **Profile Management**:
 - `PUT /api/profiles/:nodeId` - Update node profile (owner only, RLS enforced)
@@ -500,10 +567,9 @@ make prod-docker-no-caddy
   - Returns: `{ url }` - CDN URL
 
 **Tipping**:
+- `GET /api/nodes/:nodeId/tip-config` - Get tip configuration
 - `PUT /api/nodes/:nodeId/tip-config` - Configure tipping (owner only)
   - Body: `{ walletAddress, acceptedCoins, minimumTip, thankYouMessage, isActive }`
-- `POST /api/tips` - Record tip (optional)
-  - Body: `{ nodeId, txHash, amount, coin, fromAddress }`
 
 ## Authentication & Authorization
 
@@ -850,6 +916,50 @@ docker exec -i atlasp2p-db psql -U postgres -d postgres < supabase/migrations/00
 - `PUT /api/keys/:id` - Update key settings
 - `DELETE /api/keys/:id` - Delete key
 - `POST /api/keys/:id/rotate` - Rotate key
+
+## Optional Integrations
+
+### Analytics (PostHog)
+
+**Purpose**: Product analytics, user behavior tracking, feature usage
+
+**Setup**:
+1. Create account at [posthog.com](https://posthog.com) (free tier available)
+2. Add environment variables:
+   ```bash
+   NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_key
+   NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com  # or https://us.i.posthog.com
+   ```
+3. Analytics automatically enabled when keys are present
+4. Respects Do Not Track browser setting
+
+**Features**:
+- Automatic page view tracking
+- Session recording (optional)
+- Feature flags (optional)
+- Completely optional - app works without it
+
+### SEO Customization
+
+**Configuration**: All SEO settings in `config/project.config.yaml`:
+
+```yaml
+content:
+  siteName: "YourCoin Nodes Map"
+  siteDescription: "Real-time network visualization"
+  seo:
+    title: "Custom SEO Title"  # Override siteName
+    titleTemplate: "%s | YourCoin"  # Page title format
+    description: "Custom meta description"
+    keywords:
+      - yourcoin
+      - nodes
+      - blockchain
+    twitterHandle: "@yourcoin"
+    robots: "index, follow"
+```
+
+**Auto-generated if not specified**: Title, description, keywords from chain config.
 
 ## Contributing
 
