@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================"
-echo "Dingocoin Nodes Crawler - Startup"
+echo "AtlasP2P Crawler - Startup"
 echo "========================================"
 
 GEOIP_DIR="/app/data/geoip"

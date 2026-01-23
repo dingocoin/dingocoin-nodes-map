@@ -226,8 +226,8 @@ All tables have RLS enabled with policies:
    - **Two-step POST-based verification**
    - User downloads chain-specific binary (auto-built in CI/CD)
    - Binary runs on node server, checks:
-     - Daemon process running (e.g., dingocoind, dingocoin-qt)
-     - P2P port listening (e.g., 33117)
+     - Daemon process running (e.g., bitcoind, bitcoin-qt, dogecoind)
+     - P2P port listening (e.g., 8333, 22556)
      - Request IP matches node IP in database
    - **No port forwarding required** - works behind NAT/CGNAT
    - Multi-layer security: process check + port check + IP validation

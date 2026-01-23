@@ -11,7 +11,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import Supercluster from 'supercluster';
 import { Sun, Map as MapIcon, Moon, ChevronDown, Layers, Plus, Minus } from 'lucide-react';
 import { useNodes } from '@/hooks/useNodes';
-import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig, getAssetPaths, getChainConfig, isVersionOutdated } from '@/config';
+import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig, getAssetPaths, getChainConfig } from '@/config';
 import { getTierColor, getTierIcon, getVersionStatusColor } from '@/lib/theme-colors';
 import type { NodeWithProfile, TileStyleConfig, NodeTier, VersionStatus } from '@atlasp2p/types';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -518,13 +518,36 @@ export default function MapLibreMap({
   const defaultMarkerIcon = assets.markerIconPath || assets.logoPath;
 
   // Calculate version status for a node
+  // Uses the pre-computed isCurrentVersion from crawler (more reliable than re-parsing)
   const getNodeVersionStatus = useCallback((node: NodeWithProfile): VersionStatus | null => {
     if (!node.clientVersion) return null;
-    return isVersionOutdated(
-      node.clientVersion,
-      chainConfig.currentVersion,
-      chainConfig.minimumVersion
-    );
+
+    // Use crawler's pre-computed value - it correctly parses version strings like "/Gotoshi:1.18.0/"
+    if (node.isCurrentVersion) {
+      return 'current';
+    }
+
+    // For non-current versions, check if critical (below minimum)
+    // Only use parsed version fields if they're valid (> 0, indicating successful parsing)
+    const hasValidVersionFields = node.versionMajor !== null &&
+                                   node.versionMinor !== null &&
+                                   (node.versionMajor > 0 || node.versionMinor > 0);
+
+    if (hasValidVersionFields) {
+      const minParts = chainConfig.minimumVersion.split('.').map(Number);
+      const minMajor = minParts[0] || 0;
+      const minMinor = minParts[1] || 0;
+
+      if (node.versionMajor! < minMajor ||
+          (node.versionMajor === minMajor && node.versionMinor! < minMinor)) {
+        return 'critical';
+      }
+      return 'outdated';
+    }
+
+    // Fallback: if version fields are 0/null (parsing failed), assume outdated not critical
+    // This is safer than assuming critical when we don't know the actual version
+    return 'outdated';
   }, [chainConfig]);
 
   // Render node marker icon

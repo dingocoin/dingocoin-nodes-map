@@ -3,7 +3,7 @@ layout: default
 title: API Quick Reference - AtlasP2P
 ---
 
-# Dingocoin Nodes Map - API Quick Reference
+# AtlasP2P - API Quick Reference
 
 ## Endpoints Overview
 
@@ -17,27 +17,27 @@ title: API Quick Reference - AtlasP2P
 
 ### 1. Get All Diamond Tier Nodes
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?tier=diamond&online=true"
+curl "https://nodes.example.com/api/nodes.json?tier=diamond&online=true"
 ```
 
 ### 2. Get Network Health
 ```bash
-curl "https://nodes.dingocoin.org/api/stats.json" | jq '.network_health'
+curl "https://nodes.example.com/api/stats.json" | jq '.network_health'
 ```
 
 ### 3. Get Top 10 Countries
 ```bash
-curl "https://nodes.dingocoin.org/api/countries.json?sort=count&order=desc" | jq '.countries[:10]'
+curl "https://nodes.example.com/api/countries.json?sort=count&order=desc" | jq '.countries[:10]'
 ```
 
 ### 4. Get Verified Nodes in USA
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?country=US&verified=true"
+curl "https://nodes.example.com/api/nodes.json?country=US&verified=true"
 ```
 
 ### 5. Get Nodes Sorted by PIX Score
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?sort=pix_score&order=desc&limit=50"
+curl "https://nodes.example.com/api/nodes.json?sort=pix_score&order=desc&limit=50"
 ```
 
 ## Response Headers
@@ -97,21 +97,21 @@ All responses include:
 ### Python
 ```python
 import requests
-r = requests.get('https://nodes.dingocoin.org/api/nodes.json',
+r = requests.get('https://nodes.example.com/api/nodes.json',
                  params={'tier': 'diamond', 'online': 'true'})
 print(r.json())
 ```
 
 ### JavaScript
 ```javascript
-const response = await fetch('https://nodes.dingocoin.org/api/stats.json');
+const response = await fetch('https://nodes.example.com/api/stats.json');
 const stats = await response.json();
 console.log(stats.network_health);
 ```
 
 ### cURL + jq
 ```bash
-curl -s "https://nodes.dingocoin.org/api/countries.json" | jq '.countries[:5]'
+curl -s "https://nodes.example.com/api/countries.json" | jq '.countries[:5]'
 ```
 
 ## Common Use Cases
@@ -130,6 +130,5 @@ curl -s "https://nodes.dingocoin.org/api/countries.json" | jq '.countries[:5]'
 
 ## Support
 
-- **Documentation**: [Full API Docs](./API.md)
+- **Documentation**: [Full API Docs](./API_REFERENCE.md)
 - **Issues**: [GitHub Issues](https://github.com/RaxTzu/AtlasP2P/issues)
-- **Community**: [Discord](https://discord.gg/dingocoin)

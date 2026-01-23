@@ -318,7 +318,7 @@ The workflow automatically handles authentication on your server:
 
 #### **For ECR:**
 ```bash
-# Priority 1: Use host AWS CLI (Dingocoin-Ecosystem pattern)
+# Priority 1: Use host AWS CLI (recommended pattern)
 → Check if `aws` command exists on host
   ↓ Yes → aws ecr get-login-password (uses server IAM role/credentials)
   ↓ Success → Done!
@@ -524,10 +524,10 @@ Workflow automatically:
 
 **4. build-verify-binaries**
 - Extracts configuration from `project.config.yaml`:
-  - Chain name (e.g., "Dingocoin")
-  - P2P port (e.g., 33117)
+  - Chain name (e.g., "YourCoin")
+  - P2P port (e.g., 8333)
   - Site URL for API calls
-  - Derives daemon names (e.g., "dingocoind,dingocoin-qt")
+  - Derives daemon names (e.g., "yourcoind,yourcoin-qt")
 - Builds verification binaries for all platforms:
   - Linux (x86_64, ARM64)
   - macOS (Intel, Apple Silicon)
@@ -596,18 +596,18 @@ The build process extracts configuration from `project.config.yaml`:
 
 ```yaml
 chainConfig:
-  name: "Dingocoin"
-  p2pPort: 33117
+  name: "YourCoin"
+  p2pPort: 8333
 
 content:
-  siteUrl: "https://nodes.dingocoin.com"
+  siteUrl: "https://nodes.example.com"
 ```
 
 **Derived values:**
-- `CHAIN_NAME`: "Dingocoin"
-- `DAEMON_NAMES`: "dingocoind,dingocoin-qt" (auto-derived from chain name)
-- `DEFAULT_PORT`: "33117"
-- `API_URL`: "https://nodes.dingocoin.com"
+- `CHAIN_NAME`: "YourCoin"
+- `DAEMON_NAMES`: "yourcoind,yourcoin-qt" (auto-derived from chain name)
+- `DEFAULT_PORT`: "8333"
+- `API_URL`: "https://nodes.example.com"
 
 ### Build Process
 

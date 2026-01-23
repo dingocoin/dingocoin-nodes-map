@@ -28,19 +28,19 @@ docker restart atlasp2p-web
 ## Project Identity
 
 ```yaml
-projectName: Dingocoin Nodes Map
-chain: dingocoin
+projectName: YourCoin Nodes Map
+chain: yourcoin
 ```
 
 ### `projectName` (string)
 - **Description**: Display name for your project
 - **Used in**: Page titles, header, meta tags
-- **Example**: "Dogecoin Nodes Map", "Bitcoin Network Map"
+- **Example**: "Dogecoin Nodes Map", "Bitcoin Network Map", "Litecoin Nodes Map"
 
 ### `chain` (string, lowercase)
 - **Description**: Database identifier for your blockchain
 - **Used in**: Database queries, API filters, crawler configuration
-- **Example**: `dingocoin`, `dogecoin`, `bitcoin`, `litecoin`
+- **Example**: `dogecoin`, `bitcoin`, `litecoin`
 - **⚠️ Important**: Must match the chain value in your database
 
 ---
@@ -49,43 +49,43 @@ chain: dingocoin
 
 ```yaml
 chainConfig:
-  name: Dingocoin
-  ticker: DINGO
-  p2pPort: 33117
-  rpcPort: 22892
-  protocolVersion: 70017
-  currentVersion: "1.16.0"
-  minimumVersion: "1.14.0"
-  criticalVersion: "1.12.0"
-  explorerUrl: https://explorer.dingocoin.org
-  websiteUrl: https://dingocoin.org
-  githubUrl: https://github.com/dingocoin/dingocoin
+  name: YourCoin
+  ticker: YOUR
+  p2pPort: 8333
+  rpcPort: 8332
+  protocolVersion: 70015
+  currentVersion: "1.0.0"
+  minimumVersion: "0.9.0"
+  criticalVersion: "0.8.0"
+  explorerUrl: https://explorer.yourcoin.org
+  websiteUrl: https://yourcoin.org
+  githubUrl: https://github.com/yourcoin/yourcoin
 ```
 
 ### `name` (string)
 - **Description**: Human-readable blockchain name
 - **Used in**: UI labels, tooltips, network info display
-- **Example**: "Dingocoin", "Dogecoin", "Bitcoin"
+- **Example**: "Dogecoin", "Bitcoin", "Litecoin"
 
 ### `ticker` (string)
 - **Description**: Cryptocurrency ticker symbol
-- **Used in**: Node labels, statistics, tipping system, API key prefixes (e.g., `dingo_sk_...`)
-- **Example**: "DINGO", "DOGE", "BTC", "LTC"
+- **Used in**: Node labels, statistics, tipping system, API key prefixes (e.g., `your_sk_...`)
+- **Example**: "YOUR", "DOGE", "BTC", "LTC"
 
 ### `p2pPort` (integer)
 - **Description**: Default P2P network port
 - **Used in**: Crawler connection attempts, node validation
-- **Example**: 33117 (Dingocoin), 22556 (Dogecoin), 8333 (Bitcoin)
+- **Example**: 22556 (Dogecoin), 8333 (Bitcoin), 9333 (Litecoin)
 
 ### `rpcPort` (integer)
 - **Description**: Default RPC port
 - **Used in**: Node verification, documentation
-- **Example**: 22892 (Dingocoin), 22555 (Dogecoin), 8332 (Bitcoin)
+- **Example**: 22555 (Dogecoin), 8332 (Bitcoin), 9332 (Litecoin)
 
 ### `protocolVersion` (integer)
 - **Description**: Current P2P protocol version
 - **Used in**: Crawler handshake, compatibility checks
-- **Example**: 70017 (Dingocoin), 70015 (Dogecoin/Bitcoin)
+- **Example**: 70015 (Dogecoin/Bitcoin), 70017 (newer chains)
 
 ### `currentVersion` (string)
 - **Description**: Latest stable node software version
@@ -105,33 +105,33 @@ chainConfig:
 ### `explorerUrl` (string, URL)
 - **Description**: Blockchain explorer base URL
 - **Used in**: Links to transactions, blocks, addresses
-- **Example**: "https://explorer.dingocoin.org"
+- **Example**: "https://dogechain.info", "https://blockchair.com/bitcoin"
 
 ### `websiteUrl` (string, URL)
 - **Description**: Official project website
 - **Used in**: Footer links, "Learn more" buttons
-- **Example**: "https://dingocoin.org"
+- **Example**: "https://dogecoin.com", "https://bitcoin.org"
 
 ### `githubUrl` (string, URL)
 - **Description**: Source code repository
 - **Used in**: Footer links, developer resources
-- **Example**: "https://github.com/dingocoin/dingocoin"
+- **Example**: "https://github.com/dogecoin/dogecoin", "https://github.com/bitcoin/bitcoin"
 
 ### `messagePrefix` (string, optional)
 - **Description**: Message signing prefix used by wallet for signature verification
 - **Used in**: Node ownership verification via message signing
-- **Example**: "Dingocoin Signed Message:\n", "Bitcoin Signed Message:\n"
+- **Example**: "Dogecoin Signed Message:\n", "Bitcoin Signed Message:\n"
 - **Note**: Must match your wallet's signing prefix exactly. If omitted, defaults to "{chainName} Signed Message:\n"
 
 ### `addressPrefix` (string, optional)
 - **Description**: Expected starting character(s) of wallet addresses
 - **Used in**: Address format validation during verification
-- **Example**: "D" (Dingocoin/Dogecoin), "1" (Bitcoin P2PKH), "L" (Litecoin)
+- **Example**: "D" (Dogecoin), "1" (Bitcoin P2PKH), "L" (Litecoin)
 
 ### `pubKeyHash` (string, hex, optional)
 - **Description**: Version byte for P2PKH addresses in hexadecimal
 - **Used in**: Cryptographic signature recovery during verification
-- **Example**: "1e" (Dingocoin/Dogecoin = 0x1E = 30), "00" (Bitcoin = 0x00)
+- **Example**: "1e" (Dogecoin = 0x1E = 30), "00" (Bitcoin = 0x00)
 
 ---
 
@@ -139,18 +139,18 @@ chainConfig:
 
 ```yaml
 themeConfig:
-  name: Dingocoin Nodes Map
+  name: YourCoin Nodes Map
   primaryColor: "#ff8c00"
   secondaryColor: "#ffa500"
   accentColor: "#ffb347"
-  logo: /logos/dingocoin.png
-  favicon: /logos/dingocoin-favicon.ico
+  logo: /logos/logo.png
+  favicon: /logos/favicon.ico
 ```
 
 ### `name` (string)
 - **Description**: Theme display name
 - **Used in**: Meta tags, page titles
-- **Example**: "Dingocoin Nodes Map"
+- **Example**: "Dogecoin Nodes Map", "Bitcoin Network Map"
 
 ### `primaryColor` (string, hex color)
 - **Description**: Main brand color
@@ -171,7 +171,7 @@ themeConfig:
 ### `logo` (string, path)
 - **Description**: Path to main logo image (relative to `/public`)
 - **Used in**: Header, footer, loading screens, navigation
-- **Example**: "/logos/dingocoin.png" or "/logos/logo.png"
+- **Example**: "/logos/logo.png" or "/logos/yourcoin.png"
 - **Template**: See `apps/web/public/logos/TEMPLATE-logo.svg` for guidance
 - **Recommended**:
   - Format: PNG or SVG (SVG preferred for scalability)
@@ -182,7 +182,7 @@ themeConfig:
 ### `favicon` (string, path)
 - **Description**: Path to favicon (browser tab icon)
 - **Used in**: Browser tab icon, bookmarks
-- **Example**: "/logos/dingocoin-favicon.ico" or "/logos/favicon.ico"
+- **Example**: "/logos/favicon.ico" or "/logos/yourcoin-favicon.ico"
 - **Template**: See `apps/web/public/logos/TEMPLATE-favicon.svg` for guidance
 - **Recommended**:
   - Format: ICO, PNG, or SVG
@@ -200,9 +200,9 @@ themeConfig:
 
 ```yaml
 content:
-  siteName: Dingocoin Nodes Map
-  siteDescription: Real-time map and analytics for Dingocoin network nodes worldwide
-  siteUrl: https://nodes.dingocoin.org
+  siteName: YourCoin Nodes Map
+  siteDescription: Real-time map and analytics for YourCoin network nodes worldwide
+  siteUrl: https://nodes.example.com
 
   navigation:
     - name: Map
@@ -222,13 +222,13 @@ content:
 
   social:
     - name: GitHub
-      href: https://github.com/dingocoin/dingocoin
+      href: https://github.com/yourcoin/yourcoin
       icon: github
     - name: Twitter
-      href: https://twitter.com/ABoringDingo
+      href: https://twitter.com/yourcoin
       icon: twitter
     - name: Discord
-      href: https://discord.gg/dingocoin
+      href: https://discord.gg/yourcoin
       icon: discord
 
   copyrightText: Open source project
@@ -238,18 +238,18 @@ content:
 ### `siteName` (string)
 - **Description**: Full site name for SEO
 - **Used in**: `<title>` tags, Open Graph metadata
-- **Example**: "Dingocoin Nodes Map"
+- **Example**: "Dogecoin Nodes Map", "Bitcoin Network Map"
 
 ### `siteDescription` (string)
 - **Description**: Site description for SEO and social sharing
 - **Used in**: Meta description, Open Graph description
-- **Example**: "Real-time map and analytics for Dingocoin network nodes worldwide"
+- **Example**: "Real-time map and analytics for YourCoin network nodes worldwide"
 - **Recommended**: 50-160 characters
 
 ### `siteUrl` (string, URL)
 - **Description**: Canonical site URL
 - **Used in**: Open Graph tags, sitemap, canonical links
-- **Example**: "https://nodes.dingocoin.org"
+- **Example**: "https://nodes.example.com" (replace with your domain)
 
 ### `navigation` (array of objects)
 Navigation menu items in the header
@@ -304,7 +304,7 @@ Social media icons in footer
 ### `copyrightText` (string)
 - **Description**: Copyright/license text in footer
 - **Used in**: Footer bottom section
-- **Example**: "Open source project", "MIT License", "© 2025 Dingocoin"
+- **Example**: "Open source project", "MIT License", "© 2025 YourCoin"
 
 ### `githubRepoUrl` (string, URL)
 - **Description**: Link to this nodes map repository (not the blockchain repo)
@@ -432,18 +432,18 @@ AtlasP2P uses **two independent email systems** for different purposes:
 #### `email.fromEmail` (string, email)
 - **Description**: Default sender email address for user emails
 - **Used in**: Verification emails, user notifications, general communications
-- **Example**: `noreply@example.com`, `no-reply@nodes.dingocoin.org`
+- **Example**: `noreply@example.com`, `no-reply@nodes.yourcoin.com`
 - **Important**: Must be a verified sender in your email provider
 
 #### `email.fromName` (string)
 - **Description**: Display name for email sender
 - **Used in**: Email "From" field display name
-- **Example**: `Dingocoin Nodes Map`, `Node Map`
+- **Example**: `YourCoin Nodes Map`, `Node Map`
 
 #### `email.alertsFromEmail` (string, email, optional)
 - **Description**: Separate sender email for system alerts
 - **Used in**: Critical alerts, system notifications to admins
-- **Example**: `alerts@example.com`, `system-alerts@nodes.dingocoin.org`
+- **Example**: `alerts@example.com`, `system-alerts@nodes.yourcoin.com`
 - **Default**: Falls back to `fromEmail` if not specified
 - **Why separate?**: Allows admins to filter/prioritize alert emails
 
@@ -528,14 +528,14 @@ mapConfig:
   clusterMaxZoom: 14
 
   tileStyles:
-    - id: dingocoin
-      name: Dingocoin (Themed)
+    - id: light
+      name: Light (Themed)
       url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png
       attribution: "&copy; OpenStreetMap contributors"
       maxZoom: 20
       subdomains: [a, b, c, d]
 
-  defaultTileStyle: dingocoin
+  defaultTileStyle: light
 ```
 
 ### `defaultCenter` (array: [latitude, longitude])
@@ -623,7 +623,7 @@ url: https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png
 ### `defaultTileStyle` (string)
 - **Description**: ID of default tile style to show
 - **Used in**: Initial map render, style switcher default
-- **Example**: "dingocoin", "voyager", "dark"
+- **Example**: "light", "voyager", "dark"
 - **Must match**: One of the `id` values in `tileStyles` array
 
 ---
@@ -728,7 +728,7 @@ verification:
 
 - **`enabled`** - Enable node ownership verification system
 - **`methods.messageSign`** - ✅ **FULLY WORKING** - Verify via wallet message signature
-  - User signs challenge with wallet: `dingocoin-cli signmessage "address" "challenge"`
+  - User signs challenge with wallet: `yourcoin-cli signmessage "address" "challenge"`
   - Uses chain-specific crypto verification (message prefix, address format)
   - Most secure method - proves control of private keys
 - **`methods.dnsTxt`** - ✅ **FULLY WORKING** - Verify via DNS TXT record
@@ -858,9 +858,9 @@ TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 ```yaml
 assets:
-  logoPath: /logos/dingocoin.png
-  faviconPath: /logos/dingocoin-favicon.ico
-  ogImagePath: /logos/dingocoin-og.png
+  logoPath: /logos/logo.png
+  faviconPath: /logos/favicon.ico
+  ogImagePath: /logos/og-image.png
 ```
 
 ### `logoPath` (string, path)
@@ -878,7 +878,7 @@ assets:
 ### `ogImagePath` (string, path)
 - **Description**: Path to Open Graph image for social media sharing
 - **Used in**: Facebook, Twitter, Discord, LinkedIn link previews
-- **Example**: "/logos/dingocoin512.png" or "/logos/logo-512.png"
+- **Example**: "/logos/og-image.png" or "/logos/logo-512.png"
 - **Template**: See `apps/web/public/logos/TEMPLATE-logo-512.svg` for guidance
 - **Recommended**:
   - Format: PNG or JPG (PNG preferred)

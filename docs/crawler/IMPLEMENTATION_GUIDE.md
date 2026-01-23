@@ -47,7 +47,7 @@ See detailed instructions below.
 ### Files Created
 
 1. **`/path/to/AtlasP2P/apps/crawler/src/rpc.py`**
-   - New RPC client for connecting to Dingocoin node
+   - New RPC client for connecting to your blockchain node
    - Methods: `getpeerinfo()`, `getaddednodeinfo()`, `get_all_peers()`
 
 2. **`/path/to/AtlasP2P/apps/crawler/src/crawler_enhanced.py`**
@@ -132,43 +132,43 @@ addr_data = await asyncio.wait_for(
 
 ## Configuration Guide
 
-### Dingocoin Node Setup
+### Blockchain Node Setup
 
-You need a running Dingocoin node with RPC enabled.
+You need a running blockchain node with RPC enabled.
 
-#### 1. Install Dingocoin Node
+#### 1. Install Your Blockchain Node
 
 If not already installed:
 ```bash
-# Download from https://github.com/dingocoin/dingocoin
+# Download your blockchain's core client from the official repository
 # Or use existing node
 ```
 
-#### 2. Configure RPC in dingocoin.conf
+#### 2. Configure RPC in your blockchain's config file
 
-Location: `~/.dingocoin/dingocoin.conf`
+Location: `~/.yourcoin/yourcoin.conf` (varies by chain)
 
 Add these lines:
 ```conf
 # RPC Settings
 server=1
-rpcuser=dingouser
+rpcuser=rpcuser
 rpcpassword=your_secure_password_here_change_this
-rpcport=22892
+rpcport=8332  # Varies by chain (e.g., 8332 for Bitcoin, 22555 for Dogecoin)
 rpcallowip=127.0.0.1
 
 # Optional: increase connections for better discovery
 maxconnections=125
 ```
 
-#### 3. Restart Dingocoin Node
+#### 3. Restart Your Node
 
 ```bash
 # If using systemd
-sudo systemctl restart dingocoind
+sudo systemctl restart yourcoind
 
 # Or if running manually
-dingocoind -daemon
+yourcoind -daemon
 ```
 
 #### 4. Test RPC Connection
@@ -318,12 +318,12 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'down') as offline_nodes,
     COUNT(DISTINCT country_code) as countries
 FROM nodes
-WHERE chain = 'dingocoin';
+WHERE chain = 'yourcoin';
 
 # See node distribution
 SELECT country_code, COUNT(*) as count
 FROM nodes
-WHERE chain = 'dingocoin' AND status = 'up'
+WHERE chain = 'yourcoin' AND status = 'up'
 GROUP BY country_code
 ORDER BY count DESC
 LIMIT 10;
@@ -334,7 +334,7 @@ SELECT
     COUNT(*) FILTER (WHERE last_seen > NOW() - INTERVAL '24 hours') as last_day,
     COUNT(*) as total
 FROM nodes
-WHERE chain = 'dingocoin';
+WHERE chain = 'yourcoin';
 ```
 
 ### View Crawler Logs
@@ -362,10 +362,10 @@ Look for:
 **Symptoms**: "RPC connection test failed"
 
 **Solutions**:
-1. Check Dingocoin node is running: `ps aux | grep dingocoin`
-2. Verify RPC credentials in `dingocoin.conf`
+1. Check your node is running: `ps aux | grep yourcoind`
+2. Verify RPC credentials in your config file
 3. Test with curl (see above)
-4. Check firewall allows localhost:22892
+4. Check firewall allows localhost on your RPC port
 
 ### No Peers from RPC
 
@@ -375,9 +375,9 @@ Look for:
 1. Node might not have connected peers yet (wait 10 min)
 2. Check `getpeerinfo` manually:
 ```bash
-dingocoin-cli getpeerinfo
+yourcoin-cli getpeerinfo
 ```
-3. Increase maxconnections in dingocoin.conf
+3. Increase maxconnections in your config file
 
 ### Crawler Finds Same Nodes Every Time
 

@@ -16,8 +16,8 @@
 #
 # 2. Replace ALL placeholders below:
 #    FROM .env (or AWS SSM Parameter Store):
-#      - SITE_URL → Extract domain (e.g., nodes.dingocoin.org)
-#      - API_EXTERNAL_URL → Extract domain (e.g., api.nodes.dingocoin.org)
+#      - SITE_URL → Extract domain (e.g., nodes.example.com)
+#      - API_EXTERNAL_URL → Extract domain (e.g., api.nodes.example.com)
 #      - WEB_PORT → Container host port (default: 4000)
 #      - KONG_PORT → Kong host port (default: 4020)
 #
@@ -285,9 +285,9 @@ http://nodes.example.com {
 #
 # EXAMPLE:
 # Each project gets its own port range:
-# - Dingocoin: WEB_PORT=4000, KONG_PORT=4020
-# - Bitcoin:   WEB_PORT=5000, KONG_PORT=5020
-# - Dogecoin:  WEB_PORT=6000, KONG_PORT=6020
+# - Bitcoin:   WEB_PORT=4000, KONG_PORT=4020
+# - Dogecoin:  WEB_PORT=5000, KONG_PORT=5020
+# - Litecoin:  WEB_PORT=6000, KONG_PORT=6020
 #
 # http://nodes.bitcoin.org {
 #     reverse_proxy localhost:5000
