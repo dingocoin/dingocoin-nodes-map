@@ -65,7 +65,7 @@ For production, you need **real keys** from Cloudflare Dashboard and must whitel
 
 1. Go to [Cloudflare Turnstile Dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
 2. Click **Add Site**
-3. Add your domain: `nodes.dingocoin.com`
+3. Add your domain: `nodes.example.com`
 4. Copy the **Site Key** and **Secret Key**
 
 ### 2. Configure Site Key
@@ -99,8 +99,8 @@ TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
 ### 4. Whitelist Domain
 
 In Cloudflare Dashboard → Your Site → Settings:
-- Add `nodes.dingocoin.com`
-- Add `*.dingocoin.com` (for subdomains)
+- Add `nodes.example.com`
+- Add `*.example.com` (for subdomains)
 - **DO NOT** add `localhost` to production keys (use test keys for dev)
 
 ---

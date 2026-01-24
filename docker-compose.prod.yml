@@ -107,6 +107,8 @@ services:
       - WEB_PORT=3000
     volumes:
       - geoip-data:/app/data/geoip
+      # Mount config for runtime access (allows config changes without rebuild)
+      - ./config:/app/config:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

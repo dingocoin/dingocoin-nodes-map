@@ -3,15 +3,15 @@ layout: default
 title: API Reference - AtlasP2P
 ---
 
-# Dingocoin Nodes Map - JSON API Documentation
+# AtlasP2P - JSON API Documentation
 
-This document describes the JSON API endpoints for programmatic access to node data. The API structure matches [Bitnodes.io](https://bitnodes.io) for compatibility while adding extended features specific to the Dingocoin network.
+This document describes the JSON API endpoints for programmatic access to node data. The API structure matches [Bitnodes.io](https://bitnodes.io) for compatibility while adding extended features specific to your blockchain network.
 
 ## Base URL
 
 ```
 http://localhost:4000/api  (Development)
-https://nodes.dingocoin.org/api  (Production)
+https://nodes.example.com/api  (Production - replace with your domain)
 ```
 
 ## Authentication
@@ -71,7 +71,7 @@ Retrieve a list of nodes with filtering, sorting, and pagination support.
 #### Example Request
 
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?country=US&tier=diamond&page=1&limit=50"
+curl "https://nodes.example.com/api/nodes.json?country=US&tier=diamond&page=1&limit=50"
 ```
 
 #### Response Format
@@ -135,7 +135,7 @@ curl "https://nodes.dingocoin.org/api/nodes.json?country=US&tier=diamond&page=1&
 - `asn`: Autonomous System Number
 - `organization_name`: ASN organization name
 
-**Extended Fields (Dingocoin-specific):**
+**Extended Fields (AtlasP2P-specific):**
 - `status`: Current node status (`up`, `down`, `pending`)
 - `last_seen`: Unix timestamp of last successful connection
 - `latency_ms`: Average connection latency in milliseconds
@@ -160,7 +160,7 @@ None.
 #### Example Request
 
 ```bash
-curl "https://nodes.dingocoin.org/api/stats.json"
+curl "https://nodes.example.com/api/stats.json"
 ```
 
 #### Response Format
@@ -228,7 +228,7 @@ curl "https://nodes.dingocoin.org/api/stats.json"
 - `countries_distribution`: Country distribution (country code → {count, name})
 - `latest_height`: Highest blockchain height observed
 
-**Extended Fields (Dingocoin-specific):**
+**Extended Fields (AtlasP2P-specific):**
 - `tiers_distribution`: Distribution of nodes across tiers
 - `network_health`: Aggregate network health metrics
   - `health_score`: Overall health (0-100) based on uptime, availability, latency, and verification
@@ -255,7 +255,7 @@ Retrieve detailed country-based distribution of nodes with performance metrics.
 #### Example Request
 
 ```bash
-curl "https://nodes.dingocoin.org/api/countries.json?sort=count&order=desc"
+curl "https://nodes.example.com/api/countries.json?sort=count&order=desc"
 ```
 
 #### Response Format
@@ -345,7 +345,7 @@ All endpoints return standard HTTP status codes and error responses in JSON form
 ### Example Error Response
 
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?tier=invalid"
+curl "https://nodes.example.com/api/nodes.json?tier=invalid"
 ```
 
 ```json
@@ -371,32 +371,32 @@ Data is cached for 60 seconds at the edge, with stale content served for up to 1
 ### Fetch All Diamond Nodes in the United States
 
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?country=US&tier=diamond&online=true"
+curl "https://nodes.example.com/api/nodes.json?country=US&tier=diamond&online=true"
 ```
 
 ### Get Network Statistics
 
 ```bash
-curl "https://nodes.dingocoin.org/api/stats.json"
+curl "https://nodes.example.com/api/stats.json"
 ```
 
 ### Fetch Top 10 Countries by Node Count
 
 ```bash
-curl "https://nodes.dingocoin.org/api/countries.json?sort=count&order=desc" | jq '.countries[:10]'
+curl "https://nodes.example.com/api/countries.json?sort=count&order=desc" | jq '.countries[:10]'
 ```
 
 ### Fetch Verified Nodes with High Uptime
 
 ```bash
-curl "https://nodes.dingocoin.org/api/nodes.json?verified=true&sort=uptime_percentage&order=desc&limit=100"
+curl "https://nodes.example.com/api/nodes.json?verified=true&sort=uptime_percentage&order=desc&limit=100"
 ```
 
 ### Monitor Network Health Over Time
 
 ```bash
 # Fetch current stats
-curl "https://nodes.dingocoin.org/api/stats.json" | jq '.network_health'
+curl "https://nodes.example.com/api/stats.json" | jq '.network_health'
 
 # Output:
 {
@@ -438,7 +438,7 @@ import requests
 
 # Fetch all diamond nodes
 response = requests.get(
-    'https://nodes.dingocoin.org/api/nodes.json',
+    'https://nodes.example.com/api/nodes.json',
     params={'tier': 'diamond', 'online': 'true'}
 )
 data = response.json()
@@ -454,7 +454,7 @@ for address, node in data['nodes'].items():
 const axios = require('axios');
 
 async function getNetworkStats() {
-  const response = await axios.get('https://nodes.dingocoin.org/api/stats.json');
+  const response = await axios.get('https://nodes.example.com/api/stats.json');
   const stats = response.data;
 
   console.log(`Total Nodes: ${stats.total_nodes}`);
@@ -469,7 +469,7 @@ getNetworkStats();
 
 ```bash
 # Get top 5 countries
-curl -s "https://nodes.dingocoin.org/api/countries.json" | \
+curl -s "https://nodes.example.com/api/countries.json" | \
   jq -r '.countries[:5] | .[] | "\(.code): \(.count) nodes (\(.percentage)%)"'
 
 # Output:
@@ -1026,7 +1026,6 @@ curl "https://nodes.example.com/api/health"
 
 For issues or questions about the API:
 - GitHub: [RaxTzu/AtlasP2P](https://github.com/RaxTzu/AtlasP2P)
-- Discord: [Dingocoin Community](https://discord.gg/dingocoin)
 
 ---
 

@@ -239,8 +239,8 @@ TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
 # See docs/TURNSTILE_SETUP.md for complete guide
 
 # Optional: Custom domain
-DOMAIN=nodes.dingocoin.com
-ACME_EMAIL=admin@dingocoin.com
+DOMAIN=nodes.example.com
+ACME_EMAIL=admin@example.com
 
 # Optional: Analytics (PostHog)
 # Get keys from: https://posthog.com/ (free tier available)

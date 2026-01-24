@@ -25,9 +25,10 @@ A professional, production-ready P2P network visualization platform for cryptocu
 - **API Keys**: Programmatic access with scoped permissions, rate limiting, and key rotation
 - **Admin Dashboard**: Moderation queue, user management, audit logs, and system settings
 
-## Live Demo
+## Live Example
 
-- **Dingocoin Network**: [nodes.dingocoin.com](https://nodes.dingocoin.com) (example deployment)
+See AtlasP2P in action:
+- **Dingocoin Network**: [nodes.dingocoin.com](https://nodes.dingocoin.com) - First deployment of AtlasP2P
 
 ## Quick Start
 

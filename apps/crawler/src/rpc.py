@@ -1,5 +1,5 @@
 """
-RPC Client for Dingocoin Node
+RPC Client for Blockchain Node
 
 Fetches connected peers via JSON-RPC to enhance node discovery.
 This is a critical component for comprehensive network mapping.
@@ -22,7 +22,7 @@ class RPCClient:
 
         Args:
             host: RPC server hostname/IP
-            port: RPC server port (22892 for Dingocoin)
+            port: RPC server port (varies by chain, e.g., 8332 for Bitcoin)
             user: RPC username
             password: RPC password
         """
