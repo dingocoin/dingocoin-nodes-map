@@ -67,7 +67,7 @@ chainConfig:
   #   Examples: "/Satoshi:([0-9.]+)/" for Bitcoin, "/(Dingocoin|Core):([0-9.]+)/" for your coin
   magicBytes: "c1c1c1c1"
   userAgentPatterns:
-    - "/(Dingocoin|Core):([0-9.]+)/"
+    - "/(Gotoshi|Dingocoin|Core):([0-9.]+)/"
 
 # ===========================================
 # THEME & BRANDING
